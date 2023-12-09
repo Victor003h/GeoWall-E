@@ -1,0 +1,4 @@
+[gd_resource type="Theme" format=3 uid="uid://68ud23je844w"]
+
+[resource]
+RichTextLabel/colors/font_outline_color = Color(0, 0, 0, 1)

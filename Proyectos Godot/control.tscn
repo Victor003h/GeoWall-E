@@ -1,0 +1,160 @@
+[gd_scene load_steps=8 format=3 uid="uid://btnw4j3rwadvb"]
+
+[ext_resource type="Script" path="res://control.cs" id="1_dhcno"]
+[ext_resource type="Script" path="res://CodeEdit1.cs" id="2_0hqcv"]
+[ext_resource type="Script" path="res://ButtonCompiler.cs" id="3_5of64"]
+[ext_resource type="Script" path="res://RichTextLabel1.cs" id="4_lgmjy"]
+[ext_resource type="Script" path="res://Node2D.cs" id="5_keicr"]
+
+[sub_resource type="Theme" id="Theme_mhkpv"]
+
+[sub_resource type="SyntaxHighlighter" id="SyntaxHighlighter_7c86q"]
+
+[node name="Control" type="Control"]
+layout_direction = 2
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme = SubResource("Theme_mhkpv")
+script = ExtResource("1_dhcno")
+metadata/_edit_use_anchors_ = true
+
+[node name="CodeEdit" type="CodeEdit" parent="."]
+clip_contents = true
+custom_minimum_size = Vector2(370, 480)
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.0617284
+anchor_right = 0.321181
+anchor_bottom = 0.802469
+theme_override_colors/background_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/line_number_color = Color(1, 0.54902, 0.486275, 1)
+theme_override_colors/line_length_guideline_color = Color(0, 0, 0, 1)
+syntax_highlighter = SubResource("SyntaxHighlighter_7c86q")
+minimap_draw = true
+gutters_draw_line_numbers = true
+code_completion_enabled = true
+indent_automatic = true
+indent_automatic_prefixes = Array[String]([":", "{", "[", "(", ""])
+auto_brace_completion_enabled = true
+auto_brace_completion_highlight_matching = true
+script = ExtResource("2_0hqcv")
+metadata/_edit_use_anchors_ = true
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 0
+anchor_right = 0.998264
+anchor_bottom = 0.0617284
+metadata/_edit_use_anchors_ = true
+
+[node name="TabBar" type="TabBar" parent="Panel"]
+clip_contents = true
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.998261
+anchor_bottom = 1.0
+metadata/_edit_use_anchors_ = true
+
+[node name="Button" type="Button" parent="Panel/TabBar"]
+layout_mode = 0
+anchor_right = 0.11324
+anchor_bottom = 1.0
+text = "Compilar"
+script = ExtResource("3_5of64")
+metadata/_edit_use_anchors_ = true
+
+[node name="Button2" type="Button" parent="Panel/TabBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.11324
+anchor_right = 0.22648
+anchor_bottom = 1.0
+text = "Importar
+"
+script = ExtResource("3_5of64")
+metadata/_edit_use_anchors_ = true
+
+[node name="Button3" type="Button" parent="Panel/TabBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.226481
+anchor_right = 0.339721
+anchor_bottom = 1.0
+text = "Guardar
+"
+script = ExtResource("3_5of64")
+metadata/_edit_use_anchors_ = true
+
+[node name="Button4" type="Button" parent="Panel/TabBar"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.339721
+anchor_right = 0.452961
+anchor_bottom = 1.0
+text = "Limpiar
+"
+script = ExtResource("3_5of64")
+metadata/_edit_use_anchors_ = true
+
+[node name="Panel2" type="Panel" parent="."]
+layout_mode = 0
+anchor_top = 0.802469
+anchor_right = 1.0
+anchor_bottom = 1.00309
+metadata/_edit_use_anchors_ = true
+
+[node name="RichTextLabel1" type="RichTextLabel" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.802469
+anchor_right = 0.998264
+anchor_bottom = 1.00926
+script = ExtResource("4_lgmjy")
+metadata/_edit_use_anchors_ = true
+
+[node name="Control2" type="Control" parent="."]
+anchors_preset = 0
+anchor_left = 0.321181
+anchor_top = 0.0617284
+anchor_right = 0.998264
+anchor_bottom = 0.802469
+pivot_offset = Vector2(390, 240)
+metadata/_edit_use_anchors_ = true
+
+[node name="ColorRect" type="ColorRect" parent="Control2"]
+clip_children = 2
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.701961, 0.701961, 0.701961, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Node2D" type="Node2D" parent="Control2/ColorRect"]
+position = Vector2(390, 240)
+script = ExtResource("5_keicr")
+
+[node name="OpenFileDialog" type="FileDialog" parent="."]
+title = "Open a File"
+size = Vector2i(900, 600)
+ok_button_text = "Abrir"
+file_mode = 0
+access = 2
+
+[node name="SaveFileDialog" type="FileDialog" parent="."]
+title = "Save As"
+size = Vector2i(900, 600)
+ok_button_text = "Guardar"
+access = 2
+
+[connection signal="pressed" from="Panel/TabBar/Button" to="." method="_on_button_pressed"]
+[connection signal="pressed" from="Panel/TabBar/Button2" to="." method="_on_button_2_pressed"]
+[connection signal="pressed" from="Panel/TabBar/Button3" to="." method="_on_button_3_pressed"]
+[connection signal="pressed" from="Panel/TabBar/Button4" to="." method="_on_button_4_pressed"]
+[connection signal="file_selected" from="OpenFileDialog" to="." method="_on_open_file_dialog_file_selected"]
+[connection signal="file_selected" from="SaveFileDialog" to="." method="_on_save_file_dialog_file_selected"]
