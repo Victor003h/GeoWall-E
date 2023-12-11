@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 namespace Godot;
 
-
+// a=2   x,c =  a      s=3  d,as= c x s
 	public abstract class Expressions
 	{
 		public virtual TokenType Type { get => type; set => type = value; }
@@ -116,10 +116,17 @@ namespace Godot;
 		public override TokenType Type { get => TokenType.StringExpression; }
 
 	}
-	public class IdentifierExpression : Expressions
+
+	public abstract class Identifiers : Expressions
+	{
+
+
+	}
+
+	public class IdentifierExpression : Identifiers
 	{
 		private Token identifier;
-		private string? functionName;
+
 		public IdentifierExpression(Token identifier)
 		{
 			this.identifier = identifier;
@@ -128,7 +135,7 @@ namespace Godot;
 		public new TokenType type = TokenType.Identifier;
 		public override TokenType Type { get => this.type; set => this.type = value; }
 		public Token Identifier { get => identifier; set => identifier = value; }
-		public string FunctionName { get => functionName; set => functionName = value; }
+		
 
 		public override bool Equals(object obj)
 		{
@@ -143,16 +150,15 @@ namespace Godot;
 			return identifier.dato.GetHashCode();
 		}
 	}
-	public class MultipleIdentifiers :Expressions
+	public class MultipleIdentifiers : Identifiers
 	{
 		public Expressions sequence;
 		public List<IdentifierExpression> identifiers;
 		public bool underscore;
 
-		public MultipleIdentifiers(List<IdentifierExpression> identifiers, Expressions sequence)
+		public MultipleIdentifiers(List<IdentifierExpression> identifiers)
 		{
 			this.identifiers = identifiers;
-			this.sequence = sequence;
 		}
 	
 		
@@ -402,11 +408,11 @@ namespace Godot;
 	}
 	public class Context
 	{
-		public Dictionary<IdentifierExpression, Expressions> Variables;
+		public Dictionary<Identifiers, Expressions> Variables;
 		public List<MultipleIdentifiers> multipleIdentifiersList;
 		public List<Function> functionsList;
 		public Context Father;
-		public Context(Dictionary<IdentifierExpression, Expressions> variables, Context  father,List<Function> functionsList,List<MultipleIdentifiers> multipleIdentifiersList)
+		public Context(Dictionary<Identifiers, Expressions> variables, Context  father,List<Function> functionsList,List<MultipleIdentifiers> multipleIdentifiersList)
 		{
 			this.Variables = variables;
 			this.Father = father;
@@ -414,12 +420,9 @@ namespace Godot;
 			this.functionsList=functionsList;
 		}
 	   
-		public bool AddId =true;
 
 		public Expressions  GetValue(IdentifierExpression identifier)
-		{
-			if(AddId)AddIdentifiers();
-			
+		{	
 			if(Variables.ContainsKey(identifier))   return Variables[identifier];
 
 			if (this.Father == null)
@@ -431,92 +434,83 @@ namespace Godot;
 			return this.Father.GetValue(identifier);
 		}
 		
-		public void AddIdentifiers()
+		public void AddIdentifiers(MultipleIdentifiers mult,Expressions seq)
 		{
-			AddId=false;
-			if(multipleIdentifiersList.Count==0)	return;
-			for (int i = 0; i < multipleIdentifiersList.Count; i++)
+			System.Console.WriteLine("entro");		
+			var sequence  = Execute.Evaluator(seq);
+			
+			if(sequence.Resultado is InfineSequence infineSequence )
 			{
-				var sequence  = Execute.Evaluator(multipleIdentifiersList[i].sequence);
-				
-				if(sequence.Resultado is InfineSequence infineSequence )
+				bool defined=true;
+				var stard= infineSequence.GetLimit(true);
+				if(stard==null) return;
+				if(infineSequence.hasEnd)
 				{
-					bool defined=true;
-					var stard= infineSequence.GetLimit(true);
-					if(stard==null) return;
-					if(infineSequence.hasEnd)
-					{
-						var end=infineSequence.GetLimit(false);
-						defined= infineSequence.stard<=infineSequence.end;
-						if(end==null)   return;	
-					}	
-					
-					for (int j = 0; j < multipleIdentifiersList[i].identifiers.Count; j++)
-					{
-						Expressions current= new Undefined();
-						if(infineSequence.MoveNext()&& defined) current=infineSequence.Current;
-						if(j==multipleIdentifiersList[i].identifiers.Count-1)
-						{
-							if (multipleIdentifiersList[i].identifiers[j].Identifier.dato=="_")continue;   
-							if(current is Undefined)
-							{
-								if(defined)
-									Variables.Add(multipleIdentifiersList[i].identifiers[j],new Sequence(new List<Expressions>()));
-								else Variables.Add(multipleIdentifiersList[i].identifiers[j],current);
-							}
-							else
-							{
-								var s=infineSequence.Take(j);							
-								Variables.Add(multipleIdentifiersList[i].identifiers[j],s);
-							}
-							continue;
-						}
-						if (multipleIdentifiersList[i].identifiers[j].Identifier.dato=="_")continue;
-						Variables.Add(multipleIdentifiersList[i].identifiers[j],current);
-					}  
-					continue;
-				}
+					var end=infineSequence.GetLimit(false);
+					defined= infineSequence.stard<=infineSequence.end;
+					if(end==null)   return;	
+				}	
 				
-				if(Lexer.error_list.Count==0 && sequence.Resultado is Sequence sec)
-				{  
-					for (int j = 0; j < multipleIdentifiersList[i].identifiers.Count; j++)
-					{
-						Expressions c= new Undefined();
-						if(sec.MoveNext()) c=sec.Current;
-						if(j==multipleIdentifiersList[i].identifiers.Count-1)
-						{
-							if(multipleIdentifiersList[i].identifiers[j].Identifier.dato=="_")	continue;
-							if(c is Undefined)
-								Variables.Add(multipleIdentifiersList[i].identifiers[j],new Sequence(new List<Expressions>()));   
-							else
-							{
-								Variables.Add(multipleIdentifiersList[i].identifiers[j],sec.Take(j)); 
-							}
-							continue;
-						}
-						if(multipleIdentifiersList[i].identifiers[j].Identifier.dato=="_")  continue;
-						Variables.Add(multipleIdentifiersList[i].identifiers[j],c);
-					
-					}
-					continue;
-				}
-				
-				
-				if(Lexer.error_list.Count==0 &&	sequence.Resultado is Undefined)
+				for (int j = 0; j < mult.identifiers.Count; j++)
 				{
-					for (int j = 0; j < multipleIdentifiersList[i].identifiers.Count; j++)
+					Expressions current= new Undefined();
+					if(infineSequence.MoveNext()&& defined) current=infineSequence.Current;
+					if(j==mult.identifiers.Count-1)
 					{
-						Variables.Add(multipleIdentifiersList[i].identifiers[j],new Undefined());
+						if (mult.identifiers[j].Identifier.dato=="_")continue;   
+						if(current is Undefined)
+						{
+							if(defined)
+								Variables.Add(mult.identifiers[j],new Sequence(new List<Expressions>()));
+							else Variables.Add(mult.identifiers[j],current);
+						}
+						else
+						{
+							var s=infineSequence.Take(j);							
+							Variables.Add(mult.identifiers[j],s);
+						}
+						continue;
 					}
-					continue;
-				}
-				Errors Error = new Errors($"! SEMANTIC ERROR:	Expected Sequence .",0,0);
-				Lexer.error_list.Add(Error);
+					if (mult.identifiers[j].Identifier.dato=="_")continue;
+					Variables.Add(mult.identifiers[j],current);
+				} 
 				return;
-
-								
 			}
-			multipleIdentifiersList.Clear();
+			
+			if(Lexer.error_list.Count==0 && sequence.Resultado is Sequence sec)
+			{  
+				for (int j = 0; j < mult.identifiers.Count; j++)
+				{
+					Expressions c= new Undefined();
+					if(sec.MoveNext()) c=sec.Current;
+					if(j==mult.identifiers.Count-1)
+					{
+						if(mult.identifiers[j].Identifier.dato=="_")	continue;
+						if(c is Undefined)
+							Variables.Add(mult.identifiers[j],new Sequence(new List<Expressions>()));   
+						else
+						{
+							Variables.Add(mult.identifiers[j],sec.Take(j)); 
+						}
+						continue;
+					}
+					if(mult.identifiers[j].Identifier.dato=="_")  continue;
+					Variables.Add(mult.identifiers[j],c);
+				
+				}
+				return;
+			}
+			
+			if(Lexer.error_list.Count==0 &&	sequence.Resultado is Undefined)
+			{
+				for (int j = 0; j < mult.identifiers.Count; j++)
+				{
+					Variables.Add(mult.identifiers[j],new Undefined());
+				}
+				return;
+			}
+			Errors Error = new Errors($"! SEMANTIC ERROR: Unexepected {sequence.Type}	Expected Sequence .",0,0);
+			Lexer.error_list.Add(Error);
 			return;
 		}
 

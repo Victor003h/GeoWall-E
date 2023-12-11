@@ -132,6 +132,7 @@ public partial class control : Control
 
     public static void Draw(DrawFunction d)
 	{
+		
 		foreach (var item in d.Figures)
 		{
 			figuresList.Add(item);
@@ -155,7 +156,6 @@ public partial class control : Control
 		if (tree is Function) return null;
 		if(tree is ColorExpression)	return null;
 		if(tree is ImportExpression) return null;
-		if(tree is IdentifierExpression) return null;
 		if (tree is RestoreExpression)
 		{
 			if (Parser.colorsList.Count != 0) Parser.colorsList.Pop();
@@ -174,7 +174,7 @@ public partial class control : Control
 		drawFunctions.Clear();
 		richTextLabel1.Text=null;
 		Lexer.error_list.Clear();
-		Parser.GlobalContext=new Context( new Dictionary<IdentifierExpression,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
+		Parser.GlobalContext=new Context( new Dictionary<Identifiers,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
 		Parser.contextOfFunction = null;
 		Parser.comingFromLet=false;
 		Parser.comingFromFunctionParam=false;

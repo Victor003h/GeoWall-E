@@ -18,6 +18,7 @@ public partial class Node2D : Godot.Node2D
 	void _draw()
 	{
 		List<Expressions> figures = control.figuresList;
+		System.Console.WriteLine($"hay {figures.Count} figuras para pintar");
 		foreach (var figure in figures)
 		{
 
@@ -27,7 +28,8 @@ public partial class Node2D : Godot.Node2D
 			if (figure is PointExpression point)
 			{
 				var X=point.GetX();
-				var Y=point.GetY();
+				var Y=-point.GetY();
+				System.Console.WriteLine($"x es {X} y es {Y} ");
 				if(control.CheckError())	return;	
 				DrawCircle(new Vector2((int)X,(int)Y), 2, GetColor(point.color));
 				if (point.text != "")
@@ -40,15 +42,19 @@ public partial class Node2D : Godot.Node2D
 			
 			if (figure is CircunferenceExpression circle && figure is not ArcExpression)
 			{
-				var center = Execute.Evaluator(circle.center);
-				var ratio = Execute.Evaluator(circle.ratio);
 				
-				if (center.Resultado is PointExpression auxpoint && ratio.Resultado is NumberExpression r )//Revisar el tipo de ratio
+				if (circle.center is PointExpression auxpoint && circle.ratio is NumberExpression r )
 				{
 					var x = auxpoint.GetX();
-					var y = auxpoint.GetY();
+					var y = -auxpoint.GetY();
 					var n = r.Number.dato.ToFloat();
-					if (x == null || y == null || n == null) return;
+					if (x == null || y == null || n == null)
+					{
+						control.CheckError();
+						System.Console.WriteLine("ss");
+						return;
+					}
+					System.Console.WriteLine("pinto circulp");
 					DrawArc(new Vector2((int)x, (int)y), n, 0, (float)(2 * Math.PI), 64, GetColor(circle.color));
 					if (circle.text != "")
                     {
@@ -70,38 +76,73 @@ public partial class Node2D : Godot.Node2D
 				if (center.Resultado is PointExpression c && point1.Resultado is PointExpression p1 && point2.Resultado is PointExpression p2 && measure.Resultado is NumberExpression m)
 				{
 					var x_c = (float)c.GetX();
-					var y_c = (float)c.GetY();
+					var y_c = (float)-c.GetY();
 
 					var x_1 = (float)p1.GetX();
-					var y_1 = (float)p1.GetY();
+					var y_1 = (float)-p1.GetY();
 
 					var x_2 = (float)p2.GetX();
-					var y_2 = (float)p2.GetY();
+					var y_2 = (float)-p2.GetY();
 
 					var ratio = m.Number.dato.ToFloat();
 
 					if (x_c == null || y_c == null || x_1 == null || y_1 == null || x_2 == null || y_2 == null || ratio == null) return;
 
-					double startAngle = (double)Math.Atan2(y_1 - y_c, x_1 - x_c);
+                    Console.WriteLine(y_1);
+                    Console.WriteLine(x_1);
+                    double startAngle = (double)Math.Atan2(y_1 - y_c, x_1 - x_c);
 					double finalAngle = (double)Math.Atan2(y_2 - y_c, x_2 - x_c);
 
-					if(startAngle < 0)
+                    if (startAngle < 0 && startAngle > -Math.PI)
 					{
-						startAngle += 2*Math.PI;
+						startAngle = -startAngle;
 					}
-					if (finalAngle < 0)
-					{
-						finalAngle += 2*Math.PI;
-					}
-
-					DrawArc(new Vector2(x_c, y_c), m.Number.dato.ToFloat(), (float)startAngle, (float)finalAngle, 64, GetColor(arc.color));
-					if (arc.text != "")
+                    else
                     {
-                        FontFile fontFile = new FontFile();
-                        PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(arc, 1)[0]);
-                        DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        if(startAngle > 0)
+                    {
+                            startAngle = 2 * Math.PI - startAngle;
+                        }
                     }
-				}
+					if (finalAngle < 0 && finalAngle > -Math.PI)
+					{
+						finalAngle = -finalAngle;
+					}
+					else
+					{
+                        if (finalAngle > 0)
+                        {
+                            finalAngle = 2 * Math.PI - finalAngle;
+                        }
+                    }
+                    
+					if(startAngle < finalAngle)
+					{
+                        startAngle = 2 * Math.PI - startAngle;
+                        finalAngle = 2 * Math.PI - finalAngle;
+
+                        DrawArc(new Vector2(x_c, y_c), m.Number.dato.ToFloat(), (float)(startAngle), (float)(finalAngle), 64, GetColor(arc.color));
+                        if (arc.text != "")
+                        {
+                            FontFile fontFile = new FontFile();
+                            PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(arc, 1)[0]);
+                            DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        }
+                    }
+					else
+					{
+						startAngle = (-startAngle) + (2 * Math.PI);
+						finalAngle = (-finalAngle) + (2 * Math.PI);
+						DrawArc(new Vector2(x_c, y_c), m.Number.dato.ToFloat(), (float)(finalAngle), (float)(2*Math.PI), 64, GetColor(arc.color));
+                        DrawArc(new Vector2(x_c, y_c), m.Number.dato.ToFloat(), (float)(0), (float)(startAngle), 64, GetColor(arc.color));
+                        if (arc.text != "")
+                        {
+                            FontFile fontFile = new FontFile();
+                            PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(arc, 1)[0]);
+                            DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        }
+                    }
+                }
 				else return;
 			}
 
@@ -112,9 +153,9 @@ public partial class Node2D : Godot.Node2D
 				if(pt1.Resultado is PointExpression p1 && pt2.Resultado is PointExpression p2)
 				{
 					var x1=p1.GetX();
-					var y1=p1.GetY();
+					var y1=-p1.GetY();
 					var x2=p2.GetX();
-					var y2=p2.GetY();
+					var y2=-p2.GetY();
 
 					if (x1 == x2)
 					{
@@ -151,9 +192,9 @@ public partial class Node2D : Godot.Node2D
 				if (pt1.Resultado is PointExpression p1 && pt2.Resultado is PointExpression p2)
 				{
 					var x1 = p1.GetX();
-					var y1 = p1.GetY();
+					var y1 =- p1.GetY();
 					var x2 = p2.GetX();
-					var y2 = p2.GetY();
+					var y2 = -p2.GetY();
 
 					if (x1 == null || y1 == null || x2 == null || y2 == null) return;
 					DrawLine(new Vector2((float)x1, (float)y1), new Vector2((float)x2, (float)y2), GetColor(segment.color));
@@ -176,9 +217,9 @@ public partial class Node2D : Godot.Node2D
 				if (pt1.Resultado is PointExpression p1 && pt2.Resultado is PointExpression p2)
 				{
 					var x1 = p1.GetX();
-					var y1 = p1.GetY();
+					var y1 =- p1.GetY();
 					var x2 = p2.GetX();
-					var y2 = p2.GetY();
+					var y2 =- p2.GetY();
 					if (x1 == x2)
 					{
 						if (x1 == null || y1 == null || x2 == null || y2 == null) return;

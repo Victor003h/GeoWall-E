@@ -105,7 +105,7 @@ public class Lexer
             }
             if (char.IsDigit(code[position]) )
             {
-                double number = IsNumber(code, position);
+                double number = IsNumber(code);
                 if(number==double.NaN)  return new Token(number.ToString(), line, col, TokenType.Error);
                     
                 return new Token(number.ToString(), line, col, TokenType.NumberToken);
@@ -253,7 +253,7 @@ public class Lexer
             }
         }
 
-        private  double IsNumber(string code, int pos)
+        private  double IsNumber(string code)
         {
             int cont = 0;
             double x;
@@ -289,7 +289,6 @@ public class Lexer
                 return x;
             }
         
-            
             Errors error = new Errors("! LEXICAL ERROR:" + " '" + num + "' is not  valided token.", 0, 0);
             Lexer.error_list.Add(error);
             return double.NaN;

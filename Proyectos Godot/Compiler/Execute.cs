@@ -30,7 +30,8 @@ public class Execute
 					{
 						if(x.Type!=fi)
 						{
-							Errors Err = new Errors($"! SEMANTIC ERROR: Sequence elements must be  of the same type", 0, 0);
+							System.Console.WriteLine("entro el error");
+							Errors Err = new Errors($"! SEMANTIC ERROR: Unexpected {x.Type} , expected a {fi} ,Sequence elements must be  of the same type", 0, 0);
 							Lexer.error_list.Add(Err);
 							return new Result(null, TokenType.Error);
 
@@ -51,9 +52,8 @@ public class Execute
 			{
 				var x=Evaluator(point.x);
 				var y=Evaluator(point.y);
-				if(control.CheckError())	return new Result(null,TokenType.Error);
-
-				return new Result(new PointExpression(x.Resultado,y.Resultado,point.Id,point.color), TokenType.PointExpression);
+				control.CheckError();
+				return new Result(new PointExpression(x.Resultado,y.Resultado,point.Id,point.color), TokenType.Line);
 			}
 			
 			if (tree is LineExpression line && tree is not SegmentExpression && tree is not RayExpression)
@@ -241,9 +241,9 @@ public class Execute
 				if (binary.Nodo.type == TokenType.PlusToken || binary.Nodo.type == TokenType.MinusToken || binary.Nodo.type == TokenType.MultiplicationToken
 				|| binary.Nodo.type == TokenType.DivisionToken || binary.Nodo.type == TokenType.RestoToken || binary.Nodo.type == TokenType.ExponentToken)
 				{
-					double res = BinaryOperatorEvaluator(binary);
+					var res = BinaryOperatorEvaluator(binary);
 					generico.dato= res.ToString();
-					return new Result(new NumberExpression(generico), TokenType.NumberExpression);
+					return new Result(res, TokenType.NumberExpression);
 				}
 				bool resul = BoolEvaluator(binary);
 				generico.dato=resul.ToString();
@@ -308,32 +308,48 @@ public class Execute
 				return FuntionEvaluator(fun);
 			}
 			
-			if (tree is IdentifierExpression id)
+			if (tree is Identifiers I)
 			{
-				var value = Parser.GlobalContext.GetValue(id);
-				if (value == null) return new Result(null, TokenType.Error);
-				var x = Evaluator(value);
-				return x;
+				if(I is IdentifierExpression id)
+				{
+					var value = Parser.GlobalContext.GetValue(id);
+					if (value == null) return new Result(null, TokenType.Error);
+					var x = Evaluator(value);
+					return x;
+				}
+				if(I is MultipleIdentifiers mult)
+				{
+					Parser.GlobalContext.AddIdentifiers(mult,mult.sequence);
+					return new Result(mult,TokenType.MultipleIdentifiersExpression);										
+
+				}
 			}
 			
-			if(tree is MultipleIdentifiers mult)
-			{
-				Parser.GlobalContext.AddIdentifiers();
-				return new Result(mult,TokenType.MultipleIdentifiersExpression);
-			}
-
 			
 			if (tree is LetExpression let)
 			{
-				Dictionary<IdentifierExpression,Expressions> nuevo= new Dictionary<IdentifierExpression, Expressions>();
+				//   mul             v 			ii=        
+				Dictionary<Identifiers,Expressions> nuevo= new Dictionary<Identifiers, Expressions>();
+				Parser.GlobalContext = new Context(nuevo,Parser.GlobalContext,let.context.functionsList,let.context.multipleIdentifiersList);
 				if(let.context.Variables.Count!=0)
 				{
+
 					foreach (var item in let.context.Variables)
 					{
-						nuevo.Add(item.Key,item.Value);
+						if(item.Key is IdentifierExpression i)
+						{
+							System.Console.WriteLine($"agrego a {i.Identifier.dato}");
+							var value=Evaluator(item.Value);
+							nuevo.Add(item.Key,value.Resultado);
+						}
+						else
+						{
+							System.Console.WriteLine("sssssssss");
+							Parser.GlobalContext.AddIdentifiers((MultipleIdentifiers)item.Key, item.Value);
+						}
 					}
 				}
-				Parser.GlobalContext = new Context(nuevo,Parser.GlobalContext,let.context.functionsList,let.context.multipleIdentifiersList);
+
 				foreach (var fEx in let.listReserverdFunction)
 				{
 					Evaluator(fEx);
@@ -367,6 +383,7 @@ public class Execute
 
 				var ss=new DrawFunction(d.Function,figures);
 				ss.text = d.text;
+				System.Console.WriteLine("agrego algo para pintar");
 				control.drawFunctions.Add(ss);
 				return new  Result(ss,TokenType.DrawFunction);
 			}
@@ -383,14 +400,14 @@ public class Execute
 					return null;
 				}     
 				
-				Dictionary<IdentifierExpression,Expressions> identifiers= new Dictionary<IdentifierExpression, Expressions>();
+				Dictionary<Identifiers,Expressions> identifiers= new Dictionary<Identifiers, Expressions>();
 				StackOverFlow++;
-				if (StackOverFlow > 150)
-				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: StackOverflow error", 0, 0);
-					Lexer.error_list.Add(Error);
-					return new Result(null, TokenType.Error);
-				}
+				// if (StackOverFlow > 150)
+				// {
+				// 	Errors Error = new Errors($"! SEMANTIC ERROR: StackOverflow error", 0, 0);
+				// 	Lexer.error_list.Add(Error);
+				// 	return new Result(null, TokenType.Error);
+				// }
 
 				for (int i = 0; i < v.arg.Count; i++)
 				{
@@ -399,10 +416,12 @@ public class Execute
 
 					identifiers.Add(function.args[i],aux.Resultado);         
 				}
+				System.Console.WriteLine($"entro en el contexto de la funcion {function.NameToken.dato}");
 				Parser.GlobalContext = new Context(identifiers,Parser.GlobalContext,function.Context.functionsList,function.Context.multipleIdentifiersList);
 
 				var a = Evaluator(function.Corpus);
 				Parser.GlobalContext = Parser.GlobalContext.Father;
+				System.Console.WriteLine($"salgo del contexto de la funcion {function.NameToken.dato}");
 				StackOverFlow--;
 
 				return a;
@@ -497,36 +516,75 @@ public class Execute
 
 		}
 		
-		public static double BinaryOperatorEvaluator(BinaryExpression tree)
+		public static NumberExpression BinaryOperatorEvaluator(BinaryExpression tree)
 		{
 			var left = Evaluator(tree.Left);
 			var right = Evaluator(tree.Right);
-			if(left.Resultado==null || right.Resultado==null )  return 0;
+			if(left.Resultado==null || right.Resultado==null )  return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
 			if (left.Resultado is NumberExpression l && right.Resultado is NumberExpression r)
 			{
 				if (l.Number.type == TokenType.Measure || r.Number.type == TokenType.Measure)
 				{
-					if (tree.Nodo.type == TokenType.PlusToken) return Math.Abs(double.Parse(l.Number.dato) + double.Parse(r.Number.dato));
-					if (tree.Nodo.type == TokenType.MinusToken) return Math.Abs(double.Parse(l.Number.dato) - double.Parse(r.Number.dato));
-					if (tree.Nodo.type == TokenType.MultiplicationToken) return Math.Abs(double.Parse(l.Number.dato) * double.Parse(r.Number.dato));
+					if (tree.Nodo.type == TokenType.PlusToken)
+					{
+						if(l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
+						{
+							return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) + double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
+						}
+						Errors Err = new Errors("SINTAX ERROR: A number and a measure can not be sumed or rested.", tree.Nodo.line, tree.Nodo.col);
+						Lexer.error_list.Add(Err);
+					return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+                }
+
+					if (tree.Nodo.type == TokenType.MinusToken)
+					{
+						if (l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
+						{
+							return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) - double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
+						}
+						Errors Err = new Errors("SINTAX ERROR: A number and a measure can not be sumed or rested.", tree.Nodo.line, tree.Nodo.col);
+						Lexer.error_list.Add(Err);
+					return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+                }	
+
+					if (tree.Nodo.type == TokenType.MultiplicationToken)
+					{	
+						if(l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
+						{
+							
+							Errors Err = new Errors("SINTAX ERROR: Measures can not be multiplied, only scaled by a number.", tree.Nodo.line, tree.Nodo.col);
+							Lexer.error_list.Add(Err);
+						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+                    }
+						
+						return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) * double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
+					}
 					if (tree.Nodo.type == TokenType.DivisionToken)
 					{
 						if (double.Parse(r.Number.dato) == 0)
 						{
 							string error_typ = $" ! MATH ERROR: You can not divide by 0.";
-							Errors Err = new Errors(error_typ, tree.Nodo.line, tree.Nodo.col);
-							Lexer.error_list.Add(Err);
-							return 1;
+							Errors err = new Errors(error_typ, tree.Nodo.line, tree.Nodo.col);
+							Lexer.error_list.Add(err);
+						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+
+                        }
+						if (l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
+						{
+							return new NumberExpression(new Token(((int)(double.Parse(l.Number.dato) / double.Parse(r.Number.dato))).ToString(), 0, 0, TokenType.NumberToken));
 						}
-						return (int)(double.Parse(l.Number.dato) / double.Parse(r.Number.dato));
-					}
+						Errors Err = new Errors("SINTAX ERROR: Measures can not be divided by a number, only by another measure.", tree.Nodo.line, tree.Nodo.col);
+						Lexer.error_list.Add(Err);
+						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+
+                    }
 				}
 
-				if (tree.Nodo.type == TokenType.PlusToken)  return double.Parse(l.Number.dato) + double.Parse(r.Number.dato);
-				if (tree.Nodo.type == TokenType.MinusToken) return double.Parse(l.Number.dato) - double.Parse(r.Number.dato);   
-				if (tree.Nodo.type == TokenType.MultiplicationToken)    return double.Parse(l.Number.dato) * double.Parse(r.Number.dato);
-				if (tree.Nodo.type == TokenType.ExponentToken)  return Math.Pow(double.Parse(l.Number.dato), double.Parse(r.Number.dato));
-				if (tree.Nodo.type == TokenType.RestoToken) return double.Parse(l.Number.dato) % double.Parse(r.Number.dato);
+				if (tree.Nodo.type == TokenType.PlusToken)  return new NumberExpression(new Token((double.Parse(l.Number.dato) + double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
+				if (tree.Nodo.type == TokenType.MinusToken) return new NumberExpression(new Token((double.Parse(l.Number.dato) - double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
+				if (tree.Nodo.type == TokenType.MultiplicationToken)    return new NumberExpression(new Token((double.Parse(l.Number.dato) * double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
+				if (tree.Nodo.type == TokenType.ExponentToken)  return new NumberExpression(new Token((Math.Pow(double.Parse(l.Number.dato), double.Parse(r.Number.dato))).ToString(), 0, 0, TokenType.NumberToken));
+				if (tree.Nodo.type == TokenType.RestoToken) return new NumberExpression(new Token((double.Parse(l.Number.dato) % double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
 				
 				if (tree.Nodo.type == TokenType.DivisionToken)
 				{
@@ -535,20 +593,20 @@ public class Execute
 						string error_typ = $" ! MATH ERROR: You can not divide by 0.";
 						Errors Err = new Errors(error_typ, tree.Nodo.line, tree.Nodo.col);
 						Lexer.error_list.Add(Err);
-						return 1;
+						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
 					}
 
-					return double.Parse(l.Number.dato) / double.Parse(r.Number.dato);
+					return new NumberExpression(new Token((double.Parse(l.Number.dato) / double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
+
 				}                
 			}
 
 			string error_type = $"! SEMANTIC ERROR: Operator '{tree.Nodo.dato}' cannot be applied to operands of type '{left.Type}' and '{right.Type}'.";
 			Errors Error = new Errors(error_type, tree.Nodo.line, tree.Nodo.col);
 			Lexer.error_list.Add(Error);
-			return double.NaN;
+			return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
 
-		}
-		
+    }
 		public static Result FuntionEvaluator(FunctionExpression tree)
 		{
 			switch (tree.Function.dato)
@@ -969,7 +1027,7 @@ public class Execute
 			var ratioAux = Execute.Evaluator(circle3.ratio).Resultado;
 
 			if (ratioAux is not NumberExpression n)
-			{   
+			{ 
 				Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected expression for ratio parameter, Number token expected.", 0, 0);
 				Lexer.error_list.Add(Error);
 				return null;
@@ -1086,7 +1144,7 @@ public class Execute
 						}
 					}
 
-					if (discriminant == 0) return points;             // Para no tener que repetir
+					if (discriminant == 0) return points;   
 
 					if (belongsToLine(line, point2))
 					{
@@ -1123,7 +1181,7 @@ public class Execute
 			var _ratioAux = Execute.Evaluator(circle2.ratio).Resultado;
 
 			if (_ratioAux is not NumberExpression _r)
-			{   
+			{ 
 				Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected expression for ratio parameter, Number token expected.", 0, 0);
 				Lexer.error_list.Add(Error);
 				return null;
@@ -1173,7 +1231,7 @@ public class Execute
 				}
 				if (aux2)
 				{
-					aux2 = belongsToArc(arc2, x3, y3);
+					aux2 = belongsToArc(arc2, x4, y4);
 				}
 			}
 
@@ -1197,22 +1255,12 @@ public class Execute
 			NumberExpression Y = new NumberExpression(new Token(y.ToString(), 0, 0, TokenType.NumberToken));
 			var anglesIntersect1 = GetAngles(arc.point1,  new PointExpression(X, Y, new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black), arc.center, arc.ratio);
 
-
-			if (anglesIntersect1[1] > (2 * Math.PI))
-			{
-				anglesIntersect1[1] -= 2 * Math.PI;
-			}
-			if (definitionAngles[1] > (2 * Math.PI))
-			{
-				definitionAngles[1] -= 2 * Math.PI;
-			}
-
 			if (definitionAngles[0] <= definitionAngles[1])
 			{
 				return (definitionAngles[1] >= anglesIntersect1[1]) && (anglesIntersect1[1] >= definitionAngles[0]);
 			}
 
-			return !((definitionAngles[1] >= anglesIntersect1[1]) || (anglesIntersect1[1] >= definitionAngles[0]));
+			return ((definitionAngles[1] >= anglesIntersect1[1]) || (anglesIntersect1[1] >= definitionAngles[0]));
 
 		}
 		static public List<Expressions> GetIntersect(Figures fig1, Figures fig2)
@@ -1295,9 +1343,9 @@ public class Execute
 				var ratioAux = Execute.Evaluator(circle.ratio).Resultado;
 				
 				if (ratioAux is not NumberExpression n)
-				{   
-				    Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected Token expression for ratio parameter, Number token expected.", 0, 0);
-				    Lexer.error_list.Add(Error);
+				{
+				    Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected expression for ratio parameter, Number token expected.", 0, 0);
+					Lexer.error_list.Add(Error);
 					return null;
 				}
 				
@@ -1336,6 +1384,7 @@ public class Execute
 
 			return null;
 		}
+		
 		public static double[] GetAngles(Expressions point1, Expressions point2, Expressions center, Expressions measure)
 		{
 			if (!(point1 is PointExpression p1 && point2 is PointExpression p2 && center is PointExpression c && measure is NumberExpression m))
@@ -1344,43 +1393,51 @@ public class Execute
 			}
 			else
 			{
-				double x_c = (double)c.GetX();
-				double y_c = (double)c.GetY();
-				double x_1 = (double)p1.GetX();
-				double y_1 = (double)p1.GetY();
-				double x_2 = (double)p2.GetX();
-				double y_2 = (double)p2.GetY();
-				double ratio = double.Parse(m.Number.dato);
+				var x_c = (float)c.GetX();
+				var y_c = (float)-c.GetY();
 
+				var x_1 = (float)p1.GetX();
+				var y_1 = (float)-p1.GetY();
 
-				if (x_c == null || y_c == null || x_1 == null || y_1 == null || x_2 == null || y_2 == null || ratio == null) return null;     //CORREGIR aqui tirar error
+				var x_2 = (float)p2.GetX();
+				var y_2 = (float)-p2.GetY();
 
-				double startAngle = (double)Math.Atan2(y_1 - y_c, x_1 - x_c);
+    			double ratio = double.Parse(m.Number.dato);
+
+                double startAngle = (double)Math.Atan2(y_1 - y_c, x_1 - x_c);
 				double finalAngle = (double)Math.Atan2(y_2 - y_c, x_2 - x_c);
 
-				if (startAngle < 0)
-				{
-					startAngle += 2 * Math.PI;
-				}
-				if (finalAngle < 0)
-				{
-					finalAngle += 2 * Math.PI;
-				}
 
-				double delta = finalAngle - startAngle;
-
-				if(delta<0)
+                if (startAngle < 0 && startAngle > -Math.PI)
 				{
-					delta += (2 * Math.PI);
+					startAngle = -startAngle;
 				}
+                else
+                {
+                    if(startAngle > 0)
+					{ 
+                        startAngle = 2 * Math.PI - startAngle;
+                    }
+                }
+				if (finalAngle < 0 && finalAngle > -Math.PI)
+				{
+					finalAngle = -finalAngle;
+				}
+				else
+				{
+                    if (finalAngle > 0)
+                    {
+                        finalAngle = 2 * Math.PI - finalAngle;
+                    }
+                }
 				
-				return new double[] { startAngle, startAngle+delta };
+				return new double[] { startAngle, finalAngle };
 			}
 		}
 
-		static public List<Expressions> GeneratePointsInLine(Expressions fig, int num)
+	static public List<Expressions> GeneratePointsInLine(Expressions fig, int num)
 		{
-			if (fig is LineExpression line)
+			if (fig is LineExpression line && fig is not SegmentExpression && fig is not RayExpression)
 			{
 				List<Expressions> points = new List<Expressions>();
 				RectEcuation ecuation = line.GetRectEcuation();
@@ -1407,10 +1464,35 @@ public class Execute
 				RectEcuation ecuation = segment.GetRectEcuation();
 				var x1 = ((PointExpression)(segment.point1)).GetX();
 				var x2 = ((PointExpression)(segment.point2)).GetX();
+				var y1 = ((PointExpression)(segment.point1)).GetY();
+				var y2 = ((PointExpression)(segment.point2)).GetY();
 
 				double pendiente = ecuation.pendiente;
 				double traza = ecuation.traza;
 
+				if (segment.Vertical())
+				{
+					for (int i = 0; i<num; i++)
+					{
+						Random random1 = new Random(Guid.NewGuid().GetHashCode());
+						double imagen = 0;
+						if(y1<y2)
+						{
+							imagen = (double)(random1.NextDouble()*(240-y1) + y1);
+							
+						}
+						else
+						{
+							imagen = (double)(random1.NextDouble()*(y1+240) - 240);
+							
+						}
+						NumberExpression X = new NumberExpression(new Token(x1.ToString(), 0, 0, TokenType.NumberToken));
+						NumberExpression Y = new NumberExpression(new Token(imagen.ToString(), 0, 0, TokenType.NumberToken));
+						PointExpression point = new PointExpression(X, Y, new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black);
+						points.Add(point);
+					}
+					return points;
+				}
 
 				for (int i = 0; i < num; i++)
 				{
@@ -1439,10 +1521,36 @@ public class Execute
 
 				var x1 = ((PointExpression)(ray.point1)).GetX();
 				var x2 = ((PointExpression)(ray.point2)).GetX();
+				var y1 = ((PointExpression)(ray.point1)).GetY();
+				var y2 = ((PointExpression)(ray.point2)).GetY();
 				RectEcuation ecuation = ray.GetRectEcuation();
 
 				double pendiente = ecuation.pendiente;
 				double traza = ecuation.traza;
+
+				if (ray.Vertical())
+				{
+					for (int i = 0; i<num; i++)
+					{
+						Random random1 = new Random(Guid.NewGuid().GetHashCode());
+						double imagen = 0;
+						if(y1<y2)
+						{
+							imagen = (double)(random1.NextDouble()*(240-y1) + y1);
+							
+						}
+						else
+						{
+							imagen = (double)(random1.NextDouble()*(y1+240) - 240);
+							
+						}
+						NumberExpression X = new NumberExpression(new Token(x1.ToString(), 0, 0, TokenType.NumberToken));
+						NumberExpression Y = new NumberExpression(new Token(imagen.ToString(), 0, 0, TokenType.NumberToken));
+						PointExpression point = new PointExpression(X, Y, new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black);
+						points.Add(point);
+					}
+					return points;
+				}
 
 				for (int i = 0; i < num; i++)
 				{
@@ -1465,7 +1573,7 @@ public class Execute
 				}
 				return points;
 			}
-			else if (fig is CircunferenceExpression circle)
+			else if (fig is CircunferenceExpression circle && fig is not ArcExpression)
 			{
 				List<Expressions> points = new List<Expressions>();
 				CircleEcuation ecuation = circle.GetCircleEcuation();
@@ -1482,6 +1590,7 @@ public class Execute
 					double _x = (double)(Math.Cos(angle) * r + x);
 					double _y = (double)(Math.Sin(angle) * r + y);
 
+
 					PointExpression point = new PointExpression(new NumberExpression(new Token(_x.ToString(), 0, 0, TokenType.NumberToken)),
 						new NumberExpression(new Token(_y.ToString(), 0, 0, TokenType.NumberToken)), new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black);
 					points.Add(point);
@@ -1493,74 +1602,44 @@ public class Execute
 				List<Expressions> points = new List<Expressions>();
 
 				var x_c = ((PointExpression)(arc.center)).GetX();
-				var y_c = ((PointExpression)(arc.center)).GetY();
+				var y_c = -((PointExpression)(arc.center)).GetY();
 				var ratio = Execute.Evaluator(arc.ratio).Resultado;
 
 				var x_1 = ((PointExpression)(arc.point1)).GetX();
-				var y_1 = ((PointExpression)(arc.point1)).GetY();
+				var y_1 = -((PointExpression)(arc.point1)).GetY();
 				var x_2 = ((PointExpression)(arc.point2)).GetX();
-				var y_2 = ((PointExpression)(arc.point2)).GetY();
+				var y_2 = -((PointExpression)(arc.point2)).GetY();
 
-				if (x_c == null || y_c == null || x_1 == null || y_1 == null || x_2 == null || y_2 == null || ratio == null) return null;     //CORREGIR aqui tirar error
 
-				double startAngle;
-				double finalAngle;
+				double startAngle = (double)Math.Atan2((double)(y_1 - y_c),(double)( x_1 - x_c));
+				double finalAngle = (double)Math.Atan2((double)(y_2 - y_c), (double)(x_2 - x_c));
 
-				if (x_1 == x_c)
+				if (startAngle < 0 && startAngle > -Math.PI)
 				{
-					startAngle = Math.PI / 2;
+					startAngle = -startAngle;
 				}
 				else
 				{
-					var pendienteOrigen = (double)((y_1 - y_c) / (x_1 - x_c));
-					startAngle = Math.Atan(pendienteOrigen);
-
-					if (x_1 < x_c && y_1 >= y_c)
+					if (startAngle > 0)
 					{
-						startAngle = Math.PI + startAngle;
-					}
-
-					if (x_1 < x_c && y_1 <= y_c)
-					{
-						startAngle = -Math.PI + startAngle;
-					}
-
-					if (x_1 > x_c && y_1 >= y_c)
-					{
-						startAngle = (3 * Math.PI / 2) + startAngle;
+						startAngle = 2 * Math.PI - startAngle;
 					}
 				}
-
-				if (x_2 == x_c)
+				if (finalAngle < 0 && finalAngle > -Math.PI)
 				{
-					finalAngle = Math.PI / 2;
-
+					finalAngle = -finalAngle;
 				}
 				else
 				{
-
-					var pendienteDestino = (double)((y_2 - y_c) / (x_2 - x_c));
-					finalAngle = Math.Atan(pendienteDestino);
-
-					if (x_2 < x_c && y_2 >= y_c)
+					if (finalAngle > 0)
 					{
-						finalAngle = Math.PI + finalAngle;
-					}
-
-					if (x_2 < x_c && y_2 <= y_c)
-					{
-						finalAngle = -Math.PI + finalAngle;
-					}
-
-					if (x_2 > x_c && y_2 >= y_c)
-					{
-						finalAngle = (3 * Math.PI / 2) + finalAngle;
+						finalAngle = 2 * Math.PI - finalAngle;
 					}
 				}
 
 				if (ratio is not NumberExpression n)
-				{  
-					Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected Token expression for ratio parameter, Number token expected.", 0,0);
+				{ 
+					Errors Error = new Errors($"! SEMANTIC ERROR: Unexpected expression for ratio parameter, Number token expected.", 0, 0);
 					Lexer.error_list.Add(Error);
 					return null;
 				}
@@ -1570,13 +1649,26 @@ public class Execute
 					for (int i = 0; i < num; i++)
 					{
 						var random = new Random(Guid.NewGuid().GetHashCode());
-						double angle = (double)((random.NextDouble() * (finalAngle - startAngle)) + startAngle);
+						double angle = 0;
+						if(finalAngle >= startAngle)
+						{
+							angle = (double)((random.NextDouble() * (finalAngle - startAngle)) + startAngle);
+						}
+						else
+						{
+							angle = (double)(random.NextDouble() * ((finalAngle + (2 * Math.PI)) - startAngle) + startAngle);
+							if (angle >= 2*Math.PI)
+							{
+								angle -= 2*Math.PI;
+							}
+
+						}
 
 						double _x = (double)((Math.Cos(angle) * r) + x_c);
-						double _y = (double)((Math.Sin(angle) * r) + y_c);
+						double _y = (double)((Math.Sin(angle) * r) - y_c);
 
 						PointExpression point = new PointExpression(new NumberExpression(new Token(_x.ToString(), 0, 0, TokenType.NumberToken)),
-						new NumberExpression(new Token(_y.ToString(), 0, 0, TokenType.NumberToken)), new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black);
+							new NumberExpression(new Token(_y.ToString(), 0, 0, TokenType.NumberToken)), new IdentifierExpression(new Token("", 0, 0, TokenType.Point)), System.Drawing.Color.Black);
 						points.Add(point);
 					}
 				}

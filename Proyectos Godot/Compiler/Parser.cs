@@ -12,7 +12,7 @@ public class Parser
 		private Token currentToken;
 		private int position;
 		public int lineNumber { get; set; }
-		public static Context GlobalContext=new Context( new Dictionary<IdentifierExpression,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
+		public static Context GlobalContext=new Context( new Dictionary<Identifiers,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
 		
 		public static string contextOfFunction;
 		
@@ -202,26 +202,27 @@ public class Parser
 				else       
 				{    
 					if(NextToken().type==TokenType.ColonToken && !comingFromFunctionParam)
-						{
-							if(DeclaredVariable(iden,GlobalContext,false))  return factor;
-							List<IdentifierExpression> identifierList = new List<IdentifierExpression>();
-							identifierList.Add(iden);
-							NextToken();
+					{
+						if(DeclaredVariable(iden,GlobalContext,false))  return factor;
+						List<IdentifierExpression> identifierList = new List<IdentifierExpression>();
+						identifierList.Add(iden);
+						NextToken();
 
-							var mI= MultiIdentifierDeclaration(identifierList);
-							if(mI==null)    return factor;
-							if(GlobalContext.multipleIdentifiersList==null)
-							{
-								GlobalContext.multipleIdentifiersList= new List<MultipleIdentifiers>
-								{
-									mI
-								};
-								
-							}
-							else    GlobalContext.multipleIdentifiersList.Add(mI);
-							return mI;
+						var mI= MultiIdentifierDeclaration(identifierList);
+						if(mI==null)    return factor;
+						if (currentToken.type != TokenType.AssignmentToken)
+						{
+							Errors Error = new Errors($"! SINTAX ERROR: Unexpected Token '{currentToken.dato}',expected '=' .", currentToken.line, currentToken.col);
+							Lexer.error_list.Add(Error);
+							return null;
 						}
-						
+						NextToken();
+						var sequence =_Parse();
+						mI.sequence=sequence;
+						GlobalContext.Variables.Add(mI,sequence);
+						return mI;
+					}
+					
 					if(currentToken.type==TokenType.AssignmentToken)
 					{
 						if(contextOfFunction!=null && !comingFromLet)
@@ -229,7 +230,6 @@ public class Parser
 							Errors Err = new Errors($"! SINTAX ERRORR: Cannot declare constants in a function .", iden.Identifier.line, iden.Identifier.col);
 							Lexer.error_list.Add(Err);
 							return factor;
-
 						}
 						if(DeclaredVariable(iden,GlobalContext,false)) return factor;
 						NextToken();
@@ -389,6 +389,7 @@ public class Parser
 
 			if (currentToken.type == TokenType.Point)        
 			{
+				Token token=currentToken;
 				NextToken();
 				if (currentToken.type != TokenType.IdentifierToken)
 				{
@@ -433,9 +434,11 @@ public class Parser
 					Lexer.error_list.Add(Error);
 					return factor;
 				}
+				
 				IdentifierExpression id = new IdentifierExpression(currentToken);
 				if(DeclaredVariable(id,GlobalContext,false)) return factor;
-				PointExpression p = GeneratePoint();    
+
+				PointExpression p = GeneratePoint();
 				p.Id=id;
 				 if(colorsList.Count!=0)  p.color=colorsList.Peek();
 				AddToContext(id,p);
@@ -447,6 +450,7 @@ public class Parser
 		   if (currentToken.type == TokenType.Line || currentToken.type == TokenType.Segment || currentToken.type == TokenType.Ray)    
 			{
 				var auxToken = currentToken;
+
 
 				NextToken();
 
@@ -798,7 +802,7 @@ public class Parser
 
 		private MultipleIdentifiers MultiIdentifierDeclaration(List<IdentifierExpression> identifierList) 
 		{
-			bool underscore=false;
+			
 			while (currentToken.type == TokenType.IdentifierToken)
 			{
 				IdentifierExpression idn = new IdentifierExpression(currentToken);
@@ -810,21 +814,7 @@ public class Parser
 				}
 				NextToken();
 			}
-			if (currentToken.type == TokenType.UnderscoreToken)
-			{
-				underscore = true;
-				NextToken();
-			}
-			if (currentToken.type != TokenType.AssignmentToken)
-			{
-				Errors Error = new Errors($"! SINTAX ERROR: Unexpected Token '{currentToken.dato}',expected '=' .", currentToken.line, currentToken.col);
-				Lexer.error_list.Add(Error);
-				return null;
-			}
-			NextToken();
-			Expressions sequence = _Parse();
-			MultipleIdentifiers mI = new MultipleIdentifiers(identifierList, sequence);
-			mI.underscore = underscore;
+			MultipleIdentifiers mI = new MultipleIdentifiers(identifierList);
 			return mI;
 		}
 
@@ -923,7 +913,6 @@ public class Parser
 			NextToken();
 			return new ImportExpression(list);
 		}
-
 
 		private Expressions IfFunction(Token aux)
 		{
@@ -1036,7 +1025,7 @@ public class Parser
 		private Expressions FunctionDeclaration()  
 		{        
 			Token NameFunction = currentToken;
-			Dictionary<IdentifierExpression, Expressions> listVariable = new Dictionary<IdentifierExpression, Expressions>();
+			Dictionary<Identifiers, Expressions> listVariable = new Dictionary<Identifiers, Expressions>();
 			List< MultipleIdentifiers > multipleIdList = new();
 			List<Function> functionsList= new List<Function>();
 			Context context= new Context(listVariable,null,functionsList,multipleIdList);
@@ -1069,7 +1058,6 @@ public class Parser
 			while (currentToken.type == TokenType.IdentifierToken)                // Busco los argumentos que recibe la funcion.
 			{
 				IdentifierExpression id = new IdentifierExpression(currentToken);
-				id.FunctionName = NameFunction.dato;
 				arguments.Add(id);
 				listVariable.Add(id,null);
 				ExpectedIdentifier = false;
@@ -1113,13 +1101,16 @@ public class Parser
 			contextOfFunction=null;
 			return function;
 		}    
+		
 		static public PointExpression GeneratePoint()
 		{
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			double x = random.NextDouble()*780 - 390;
+			System.Console.WriteLine($"x es {x}");
 
 			Random random2 = new Random(Guid.NewGuid().GetHashCode());
 			double y = random2.NextDouble()*480 - 240;
+			System.Console.WriteLine($"y es {y}");
 
 			NumberExpression X = new NumberExpression(new Token(x.ToString(), 0, 0, TokenType.NumberToken));
 			NumberExpression Y = new NumberExpression(new Token(y.ToString(), 0, 0, TokenType.NumberToken));
@@ -1130,25 +1121,32 @@ public class Parser
 		private bool DeclaredVariable(IdentifierExpression v,Context context,bool notError)
 		{
 
-			if(context.Variables.ContainsKey(v)) 
+			foreach (var id in context.Variables)
 			{
-				if(notError)    return true;
-				Errors Error = new Errors($"! SINTAX ERRORr: The name '{v.Identifier.dato}' is already declared in this context.", v.Identifier.line, v.Identifier.col);
-				Lexer.error_list.Add(Error);
-				return true;
-			}
-			foreach (var mulId in context.multipleIdentifiersList)
-			{
-				foreach (var id in mulId.identifiers)
+				if(id.Key is IdentifierExpression i)
 				{
-					if(id.Identifier.dato=="_") continue;
-					if (id.Equals(v)) 
+					if(i.Equals(v))
 					{
 						if(notError)    return true;
 						Errors Error = new Errors($"! SINTAX ERRORr: The name '{v.Identifier.dato}' is already declared in this context.", v.Identifier.line, v.Identifier.col);
 						Lexer.error_list.Add(Error);
 						return true;
 					}
+				}
+				if(id.Key is MultipleIdentifiers mult )
+				{
+					foreach (var item in mult.identifiers)
+					{
+						if(item.Identifier.dato=="_") continue;	
+						if (item.Equals(v)) 
+						{
+							if(notError)    return true;
+							Errors Error = new Errors($"! SINTAX ERRORr: The name '{v.Identifier.dato}' is already declared in this context.", v.Identifier.line, v.Identifier.col);
+							Lexer.error_list.Add(Error);
+							return true;
+						}
+
+					} 
 				}
 			}
 			if(context.Father==null)    return false;
@@ -1176,7 +1174,7 @@ public class Parser
 		}    
 		private Expressions LetFunction()
 		{
-			Dictionary<IdentifierExpression, Expressions> listVariable = new Dictionary<IdentifierExpression, Expressions>();
+			Dictionary<Identifiers, Expressions> listVariable = new Dictionary<Identifiers, Expressions>();
 			List< MultipleIdentifiers > multipleIdList = new List< MultipleIdentifiers >();
 			List<Function> functionsList= new List<Function>();
 			List<Expressions> listReserverdFunction= new List<Expressions>();
@@ -1195,9 +1193,7 @@ public class Parser
 				{
 					var function=ReserverdFunction(currentToken);
 					listReserverdFunction.Add(function);
-				}
-
-				
+				}				
 				if (currentToken.type != TokenType.SemiColonToken)
 				{
 					Errors Error = new Errors($"! SINTAX ERROR: Unexpecteddd Token '{currentToken.dato}',expected ';'.", currentToken.line, currentToken.col);

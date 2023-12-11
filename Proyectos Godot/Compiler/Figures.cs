@@ -8,7 +8,6 @@ namespace Godot;
 	{
 		public virtual IdentifierExpression Id { get; set; }
 		public string text = "";
-		
 		private new TokenType type = TokenType.Figure;
 		public override TokenType Type { get => type; }
 	
@@ -19,6 +18,7 @@ namespace Godot;
 	{
 		public Expressions x { get; set; }
 		public Expressions y { get; set; }
+		
 		public  System.Drawing.Color color {get;set;}
 		
 		public PointExpression(Expressions x, Expressions y, IdentifierExpression id,System.Drawing.Color color)
