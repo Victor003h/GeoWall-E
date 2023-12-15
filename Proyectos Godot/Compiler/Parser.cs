@@ -1190,7 +1190,7 @@ public class Parser
 			{
 				comingFromLet= true;
 			   if(currentToken.type==TokenType.IdentifierToken ||currentToken.type==TokenType.Point|| currentToken.type==TokenType.Line||currentToken.type==TokenType.Segment
-				||currentToken.type==TokenType.Ray || currentToken.type==TokenType.Circunference ||currentToken.type==TokenType.Arc ||currentToken.type==TokenType.ColonToken)
+				||currentToken.type==TokenType.Ray || currentToken.type==TokenType.Circunference ||currentToken.type==TokenType.Arc ||currentToken.type==TokenType.Color)
 				{			
 					Factor();
 					

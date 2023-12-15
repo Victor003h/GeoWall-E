@@ -171,6 +171,7 @@ public partial class control : Control
 	public static void Default()
 	{
 		figuresList.Clear();
+		Parser.colorsList.Clear();
 		drawFunctions.Clear();
 		richTextLabel1.Text=null;
 		Lexer.error_list.Clear();
