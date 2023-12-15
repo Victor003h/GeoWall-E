@@ -14,7 +14,7 @@ public class Parser
 		public int lineNumber { get; set; }
 		public static Context GlobalContext=new Context( new Dictionary<Identifiers,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
 		
-		public static string contextOfFunction;
+		public static List<string> contextOfFunction= new List<string>();
 		
 		public static bool correct = true;
 		public static  bool comingFromFunctionParam=false;
@@ -185,7 +185,7 @@ public class Parser
 				IdentifierExpression iden = new IdentifierExpression(currentToken);
 				if (currentLine.tokens[position + 1].type == TokenType.OpenParenthesesToken)
 				{
-					if(DeclaredFunction(iden,GlobalContext,true) || contextOfFunction==iden.Identifier.dato)   currentToken.type = TokenType.FunctionCall;
+					if(DeclaredFunction(iden,GlobalContext,true) || contextOfFunction.Contains(iden.Identifier.dato))  currentToken.type = TokenType.FunctionCall;
 					else
 					{
 						if(IsDeclaration(position))
@@ -225,7 +225,7 @@ public class Parser
 					
 					if(currentToken.type==TokenType.AssignmentToken)
 					{
-						if(contextOfFunction!=null && !comingFromLet)
+						if(contextOfFunction.Count!=0 && !comingFromLet)
 						{
 							Errors Err = new Errors($"! SINTAX ERRORR: Cannot declare constants in a function .", iden.Identifier.line, iden.Identifier.col);
 							Lexer.error_list.Add(Err);
@@ -782,6 +782,11 @@ public class Parser
 				return new RestoreExpression();
 			}
 
+			if(currentToken.type==TokenType.UndefinedToken)
+			{
+				return new Undefined();
+			}
+			
 			if (currentToken.type == TokenType.AndOperatorToken || currentToken.type == TokenType.OrOperatorToken || currentToken.type == TokenType.ComparisonToken || currentToken.type == TokenType.EqualEqualToken || currentToken.type == TokenType.NotEqualToken
 			   || currentToken.type == TokenType.DivisionToken || currentToken.type == TokenType.ExponentToken || currentToken.type == TokenType.MultiplicationToken || currentToken.type == TokenType.RestoToken)
 			{
@@ -887,7 +892,7 @@ public class Parser
 				return new ErrorExpression(currentToken.line, currentToken);
 			}
 
-			if (!File.Exists("../ImportLibrary/" + name + ".txt"))
+			if (!File.Exists("../ImportLibrary/" + name + ".geo"))
 			{
 				Errors Error = new Errors($"! SINTAX ERROR: {name} file was not found'.", currentToken.line, currentToken.col);
 				Lexer.error_list.Add(Error);
@@ -896,7 +901,7 @@ public class Parser
 			
 			importNames.Add(name);
 
-			StreamReader reader = new StreamReader("../ImportLibrary/"+name+".txt");
+			StreamReader reader = new StreamReader("../ImportLibrary/"+name+".geo");
 			string text = reader.ReadToEnd();
 			Parser parser = new Parser(text);
 			List<Expressions> list = new List<Expressions>();
@@ -948,7 +953,7 @@ public class Parser
 			NextToken();
 			Expressions child_2 = _Parse();
 			childs.Add(child_2);
-			result = new FunctionExpression(aux, childs);
+			result = new ReservedFunction(aux, childs);
 			return result;
 		}
 
@@ -971,7 +976,7 @@ public class Parser
 			{
 				NextToken();
 				comingFromFunctionParam=false;
-				return new FunctionExpression(function, childs);
+				return new ReservedFunction(function, childs);
 			}
 			while (true)                                                        // busco los argumentos
 			{
@@ -987,7 +992,7 @@ public class Parser
 			}
 			NextToken();
 			comingFromFunctionParam=false;
-			return new FunctionExpression(function, childs);
+			return new ReservedFunction(function, childs);
 
 		}
 		private Expressions DrawFuntion()
@@ -1089,7 +1094,7 @@ public class Parser
 				return null;
 			}
 			NextToken();
-			contextOfFunction = NameFunction.dato;
+			contextOfFunction.Add(NameFunction.dato);
 			Expressions corpus = _Parse();                                   // el cuerpo de la funcion 
 			Function function = new Function(NameFunction, context,arguments ,corpus);
 			if (correct)
@@ -1098,7 +1103,7 @@ public class Parser
 			}
 			GlobalContext=GlobalContext.Father;
 			GlobalContext.functionsList.Add(function);
-			contextOfFunction=null;
+			contextOfFunction.Remove(NameFunction.dato);
 			return function;
 		}    
 		
@@ -1106,11 +1111,9 @@ public class Parser
 		{
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			double x = random.NextDouble()*780 - 390;
-			System.Console.WriteLine($"x es {x}");
 
 			Random random2 = new Random(Guid.NewGuid().GetHashCode());
 			double y = random2.NextDouble()*480 - 240;
-			System.Console.WriteLine($"y es {y}");
 
 			NumberExpression X = new NumberExpression(new Token(x.ToString(), 0, 0, TokenType.NumberToken));
 			NumberExpression Y = new NumberExpression(new Token(y.ToString(), 0, 0, TokenType.NumberToken));
@@ -1174,6 +1177,7 @@ public class Parser
 		}    
 		private Expressions LetFunction()
 		{
+			System.Console.WriteLine($"en let cfuncion es  {contextOfFunction}");
 			Dictionary<Identifiers, Expressions> listVariable = new Dictionary<Identifiers, Expressions>();
 			List< MultipleIdentifiers > multipleIdList = new List< MultipleIdentifiers >();
 			List<Function> functionsList= new List<Function>();
@@ -1181,19 +1185,21 @@ public class Parser
 			Context context= new Context(listVariable,null,functionsList,multipleIdList);
 			GlobalContext=new Context(listVariable,GlobalContext,functionsList,multipleIdList);
 			NextToken();
-			comingFromLet= true;
+			
 			while(currentToken.dato!="in" && currentToken.type!=TokenType.EndFile)
 			{
+				comingFromLet= true;
 			   if(currentToken.type==TokenType.IdentifierToken ||currentToken.type==TokenType.Point|| currentToken.type==TokenType.Line||currentToken.type==TokenType.Segment
-				||currentToken.type==TokenType.Ray || currentToken.type==TokenType.Circunference ||currentToken.type==TokenType.Arc)
+				||currentToken.type==TokenType.Ray || currentToken.type==TokenType.Circunference ||currentToken.type==TokenType.Arc ||currentToken.type==TokenType.ColonToken)
 				{			
 					Factor();
+					
 				}
 				else if(currentToken.type==TokenType.ReservedFunctionToken)
 				{
 					var function=ReserverdFunction(currentToken);
 					listReserverdFunction.Add(function);
-				}				
+				}			
 				if (currentToken.type != TokenType.SemiColonToken)
 				{
 					Errors Error = new Errors($"! SINTAX ERROR: Unexpecteddd Token '{currentToken.dato}',expected ';'.", currentToken.line, currentToken.col);

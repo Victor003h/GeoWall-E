@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http.Headers;
 namespace Godot;
-public class Execute
+public static class Execute
 	{
 		public static List<Function> functionList = new List<Function>();
 		public static int StackOverFlow = 0;
@@ -13,7 +14,7 @@ public class Execute
 
 			Token generico = new Token("",0,0,TokenType.Error);
 			
-			if(tree is Sequence s)
+			if(tree is ISequence s)
 			{
 				bool first=true;
 				TokenType fi= TokenType.NumberExpression;
@@ -30,7 +31,6 @@ public class Execute
 					{
 						if(x.Type!=fi)
 						{
-							System.Console.WriteLine("entro el error");
 							Errors Err = new Errors($"! SEMANTIC ERROR: Unexpected {x.Type} , expected a {fi} ,Sequence elements must be  of the same type", 0, 0);
 							Lexer.error_list.Add(Err);
 							return new Result(null, TokenType.Error);
@@ -39,8 +39,18 @@ public class Execute
 					}
 					new_secuen.Add(x.Resultado);
 				}
-				if(s is InfineSequence i)   return new Result(new InfineSequence(new_secuen,i.hasEnd),TokenType.Sequence);
-				return new Result(new Sequence(new_secuen),TokenType.Sequence);
+				
+				if(s is InfineSequence i)   
+				{
+					var r= new InfineSequence(new_secuen,i.hasEnd);
+					r.ElementsType=fi;
+					i.GetLimit(true);
+					if(i.hasEnd)	i.GetLimit(false);
+					return	new Result(r,TokenType.InfinitiSequence);
+				}
+				var r2= new Sequence(new_secuen);
+				r2.ElementsType=fi;
+				return new Result(r2,TokenType.Sequence);
 			}
 		   
 			if(tree is Undefined u)
@@ -53,7 +63,7 @@ public class Execute
 				var x=Evaluator(point.x);
 				var y=Evaluator(point.y);
 				control.CheckError();
-				return new Result(new PointExpression(x.Resultado,y.Resultado,point.Id,point.color), TokenType.Line);
+				return new Result(new PointExpression(x.Resultado,y.Resultado,point.Id,point.color), TokenType.Point);
 			}
 			
 			if (tree is LineExpression line && tree is not SegmentExpression && tree is not RayExpression)
@@ -303,7 +313,7 @@ public class Execute
 				return new Result(str, TokenType.StringExpression);
 			}
 
-			if (tree is FunctionExpression fun)
+			if (tree is ReservedFunction fun)
 			{
 				return FuntionEvaluator(fun);
 			}
@@ -338,13 +348,11 @@ public class Execute
 					{
 						if(item.Key is IdentifierExpression i)
 						{
-							System.Console.WriteLine($"agrego a {i.Identifier.dato}");
 							var value=Evaluator(item.Value);
 							nuevo.Add(item.Key,value.Resultado);
 						}
 						else
 						{
-							System.Console.WriteLine("sssssssss");
 							Parser.GlobalContext.AddIdentifiers((MultipleIdentifiers)item.Key, item.Value);
 						}
 					}
@@ -383,7 +391,6 @@ public class Execute
 
 				var ss=new DrawFunction(d.Function,figures);
 				ss.text = d.text;
-				System.Console.WriteLine("agrego algo para pintar");
 				control.drawFunctions.Add(ss);
 				return new  Result(ss,TokenType.DrawFunction);
 			}
@@ -416,12 +423,10 @@ public class Execute
 
 					identifiers.Add(function.args[i],aux.Resultado);         
 				}
-				System.Console.WriteLine($"entro en el contexto de la funcion {function.NameToken.dato}");
 				Parser.GlobalContext = new Context(identifiers,Parser.GlobalContext,function.Context.functionsList,function.Context.multipleIdentifiersList);
 
 				var a = Evaluator(function.Corpus);
 				Parser.GlobalContext = Parser.GlobalContext.Father;
-				System.Console.WriteLine($"salgo del contexto de la funcion {function.NameToken.dato}");
 				StackOverFlow--;
 
 				return a;
@@ -516,36 +521,29 @@ public class Execute
 
 		}
 		
-		public static NumberExpression BinaryOperatorEvaluator(BinaryExpression tree)
+		public static Expressions BinaryOperatorEvaluator(BinaryExpression tree)
 		{
 			var left = Evaluator(tree.Left);
 			var right = Evaluator(tree.Right);
 			if(left.Resultado==null || right.Resultado==null )  return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+			
 			if (left.Resultado is NumberExpression l && right.Resultado is NumberExpression r)
 			{
 				if (l.Number.type == TokenType.Measure || r.Number.type == TokenType.Measure)
 				{
-					if (tree.Nodo.type == TokenType.PlusToken)
+					if (tree.Nodo.type == TokenType.PlusToken || tree.Nodo.type == TokenType.MinusToken)
 					{
 						if(l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
 						{
-							return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) + double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
-						}
-						Errors Err = new Errors("SINTAX ERROR: A number and a measure can not be sumed or rested.", tree.Nodo.line, tree.Nodo.col);
-						Lexer.error_list.Add(Err);
-					return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
-                }
-
-					if (tree.Nodo.type == TokenType.MinusToken)
-					{
-						if (l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
-						{
+							if(tree.Nodo.type == TokenType.PlusToken)
+								return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) + double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
+							
 							return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) - double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
 						}
 						Errors Err = new Errors("SINTAX ERROR: A number and a measure can not be sumed or rested.", tree.Nodo.line, tree.Nodo.col);
 						Lexer.error_list.Add(Err);
-					return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
-                }	
+						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+                	}
 
 					if (tree.Nodo.type == TokenType.MultiplicationToken)
 					{	
@@ -554,10 +552,9 @@ public class Execute
 							
 							Errors Err = new Errors("SINTAX ERROR: Measures can not be multiplied, only scaled by a number.", tree.Nodo.line, tree.Nodo.col);
 							Lexer.error_list.Add(Err);
-						return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
-                    }
-						
-						return new NumberExpression(new Token(Math.Abs(double.Parse(l.Number.dato) * double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.Measure));
+							return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
+                    	}
+						return new NumberExpression(new Token(Math.Truncate(Math.Abs(double.Parse(l.Number.dato) * double.Parse(r.Number.dato))).ToString(), 0, 0, TokenType.Measure));
 					}
 					if (tree.Nodo.type == TokenType.DivisionToken)
 					{
@@ -571,7 +568,7 @@ public class Execute
                         }
 						if (l.Number.type == TokenType.Measure && r.Number.type == TokenType.Measure)
 						{
-							return new NumberExpression(new Token(((int)(double.Parse(l.Number.dato) / double.Parse(r.Number.dato))).ToString(), 0, 0, TokenType.NumberToken));
+							return new NumberExpression(new Token(Math.Truncate(double.Parse(l.Number.dato) / double.Parse(r.Number.dato)).ToString(), 0, 0, TokenType.NumberToken));
 						}
 						Errors Err = new Errors("SINTAX ERROR: Measures can not be divided by a number, only by another measure.", tree.Nodo.line, tree.Nodo.col);
 						Lexer.error_list.Add(Err);
@@ -601,13 +598,35 @@ public class Execute
 				}                
 			}
 
+			if(left.Resultado is ISequence seq)	//                               
+			{
+				
+				if(seq is Sequence s1 && right.Resultado is ISequence s2)
+				{
+					var Concatenation= s1;
+					Concatenation.NextSequence=s2;
+					return Concatenation;
+				}
+				if(seq is InfineSequence i1 && right.Resultado is ISequence s3)
+				{
+					var Concatenation= i1;
+					Concatenation.NextSequence=s3;
+					return Concatenation;
+				}
+				if(right.Resultado is Undefined )
+					return left.Resultado;	
+			}
+			if(left.Resultado is Undefined)
+				return new Undefined();
+			
+
 			string error_type = $"! SEMANTIC ERROR: Operator '{tree.Nodo.dato}' cannot be applied to operands of type '{left.Type}' and '{right.Type}'.";
 			Errors Error = new Errors(error_type, tree.Nodo.line, tree.Nodo.col);
 			Lexer.error_list.Add(Error);
 			return new NumberExpression(new Token("0", 0, 0, TokenType.NumberToken));
 
     }
-		public static Result FuntionEvaluator(FunctionExpression tree)
+		public static Result FuntionEvaluator(ReservedFunction tree)
 		{
 			switch (tree.Function.dato)
 			{
@@ -649,16 +668,15 @@ public class Execute
 						var arg = Evaluator(tree.Child[0]); if(arg==null)   return new Result(null,TokenType.Error);
 						if(tree.Function.dato=="count")
 						{
-							if(arg.Resultado is Sequence sequence)
+							if(arg.Resultado is ISequence sequence)
 							{
 							   if(sequence is InfineSequence inf)
 							   {
 									if(!inf.hasEnd) return new Result(new Undefined(),TokenType.UndefinedExpression);
-									var aux=inf.GetLimit(true);
-									var aux2=inf.GetLimit(false);
-									if(aux==null) return  new Result(null, TokenType.Error);   
-									if(aux2==null) return  new Result(null, TokenType.Error);
-									Token resultToken = new Token((aux2 - aux+1).ToString(), 0, 0, TokenType.NumberToken);
+									inf.GetLimit(true);inf.GetLimit(false);
+					
+		
+									Token resultToken = new Token((inf.end - inf.stard+1).ToString(), 0, 0, TokenType.NumberToken);
 									return new Result(new NumberExpression(resultToken), TokenType.NumberExpression);
 							   }
 
@@ -868,7 +886,6 @@ public class Execute
 			}
 		}
 
-		
 		public static bool belongsToLine(LineExpression line, PointExpression point)
 		{
 			double abscisa = (double)point.GetX();
@@ -1263,7 +1280,7 @@ public class Execute
 			return ((definitionAngles[1] >= anglesIntersect1[1]) || (anglesIntersect1[1] >= definitionAngles[0]));
 
 		}
-		static public List<Expressions> GetIntersect(Figures fig1, Figures fig2)
+		public static List<Expressions> GetIntersect(Figures fig1, Figures fig2)
 		{
 			List<Expressions> points = new List<Expressions>();
 
@@ -1434,8 +1451,7 @@ public class Execute
 				return new double[] { startAngle, finalAngle };
 			}
 		}
-
-	static public List<Expressions> GeneratePointsInLine(Expressions fig, int num)
+		public static  List<Expressions> GeneratePointsInLine(Expressions fig, int num)
 		{
 			if (fig is LineExpression line && fig is not SegmentExpression && fig is not RayExpression)
 			{

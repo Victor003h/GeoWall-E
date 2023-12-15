@@ -101,11 +101,11 @@ public partial class control : Control
 				}
 				if(CheckError())	return;
 				var r = resul.CheckResult();
-				if (r != null)
-				{
-					if(string.IsNullOrEmpty(richTextLabel1.Text))	richTextLabel1.Text =r;
-					else	richTextLabel1.Text += '\n'+r;
-				}
+				// if (r != null)
+				// {
+				// 	if(string.IsNullOrEmpty(richTextLabel1.Text))	richTextLabel1.Text =r;
+				// 	else	richTextLabel1.Text += '\n'+r;
+				// }
 				parser.NextLine();
 			}
 			
@@ -175,7 +175,7 @@ public partial class control : Control
 		richTextLabel1.Text=null;
 		Lexer.error_list.Clear();
 		Parser.GlobalContext=new Context( new Dictionary<Identifiers,Expressions>(),null,new List<Function>(), new List<MultipleIdentifiers>());
-		Parser.contextOfFunction = null;
+		Parser.contextOfFunction.Clear();
 		Parser.comingFromLet=false;
 		Parser.comingFromFunctionParam=false;
 		Execute.StackOverFlow = 0;

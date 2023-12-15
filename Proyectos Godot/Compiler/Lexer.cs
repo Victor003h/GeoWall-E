@@ -16,7 +16,6 @@ public class Lexer
         private List<Token> tokens=new List<Token>();
         
 
-
         public Lexer(string code)
         {
             this.code=code;
@@ -83,6 +82,7 @@ public class Lexer
             {
                 return new Token("\n",line,col,TokenType.NextLineToken);
             }
+           
             if (code[position] == '\r')
             {
                 return new Token("\r",line,col,TokenType.NextLine2Token);
@@ -129,10 +129,7 @@ public class Lexer
             if (code[position] == '=')
             {
                 if (Peek(1,'='))
-                    return new Token("==", line, col, TokenType.EqualEqualToken);
-                if (Peek(1,'>'))              
-                    return new Token("=>", line, col, TokenType.AssignmentFunctionToken);
-        
+                    return new Token("==", line, col, TokenType.EqualEqualToken);        
                 return new Token(code[position].ToString(), line, col, TokenType.AssignmentToken);
             }
             if (code[position] == '(')
@@ -143,8 +140,6 @@ public class Lexer
                 return new Token(code[position].ToString(), line, col, TokenType.OpenKeyToken);
             if (code[position] == '}')
                 return  new Token(code[position].ToString(), line, col, TokenType.CloseKeyToken);
-            if (code[position] == '@')
-                return new Token(code[position].ToString(), line, col, TokenType.ArrobaToken);
             if (code[position] == '>')
             {
                 if (Peek(1,'='))

@@ -29,9 +29,7 @@ public enum TokenType
         ColonToken,
         StringToken,
         IdentifierToken,
-        ArrobaToken,
         ReservedFunctionToken,
-        AssignmentFunctionToken,
         EndLine,
         EndFile,
 
@@ -46,7 +44,6 @@ public enum TokenType
 
         Function,
         FunctionCall,
-        FunctionCallExpression,
         IdentifierArgs,
         NumberExpression,
         Error,
@@ -75,5 +72,5 @@ public enum TokenType
         UndefinedExpression,
         NextLine2Token,
         MultipleIdentifiersExpression,
-
-    }
+        InfinitiSequence,
+}

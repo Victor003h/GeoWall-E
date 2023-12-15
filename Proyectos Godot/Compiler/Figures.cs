@@ -18,8 +18,8 @@ namespace Godot;
 	{
 		public Expressions x { get; set; }
 		public Expressions y { get; set; }
-		
-		public  System.Drawing.Color color {get;set;}
+    	public override TokenType Type => TokenType.Point;
+    	public  System.Drawing.Color color {get;set;}
 		
 		public PointExpression(Expressions x, Expressions y, IdentifierExpression id,System.Drawing.Color color)
 		{
@@ -59,7 +59,7 @@ namespace Godot;
 		public Expressions point1 { get; set; }
 		public Expressions point2 { get; set; }
 		public  System.Drawing.Color color {get; set ;}
-		
+		public override TokenType Type => TokenType.Line;
 		public LineExpression(Expressions point1, Expressions point2,System.Drawing.Color color)
 		{
 			this.point1 = point1;
@@ -102,6 +102,7 @@ namespace Godot;
 	}
 	public class SegmentExpression : LineExpression
 	{
+		public override TokenType Type => TokenType.Segment;
 		public SegmentExpression(Expressions point1, Expressions point2, System.Drawing.Color color) : base(point1, point2, color)
 		{
 		}       
@@ -109,6 +110,7 @@ namespace Godot;
 
 	public class RayExpression : LineExpression
 	{
+		public override TokenType Type => TokenType.Ray;
 		public RayExpression(Expressions point1, Expressions point2, System.Drawing.Color color) : base(point1, point2, color)
 		{
 		}
@@ -126,13 +128,13 @@ namespace Godot;
 		}
 	}
 
-	public class CircleEcuation
+	public class CircleEcuation 
 	{
 		public double x;
 		public double y;
 		public double radio;
 
-
+		
 		public CircleEcuation(double x, double y, double radio)
 		{
 			this.x = x;
@@ -146,6 +148,7 @@ namespace Godot;
 		public Expressions center { get; set; }
 		public Expressions ratio { get; set; }
 		public  System.Drawing.Color color {get;set;}
+		public override TokenType Type => TokenType.Circunference;
 
 		public CircunferenceExpression(Expressions point, Expressions ratio, System.Drawing.Color color)
 		{
@@ -182,7 +185,7 @@ namespace Godot;
 		public Expressions point1 { get; set; }
 		public Expressions point2 { get; set; }
 
-
+		public override TokenType Type => TokenType.Arc;
 		public ArcExpression(Expressions center, Expressions point1, Expressions point2, Expressions ratio, System.Drawing.Color color) : base(center, ratio, color)
 		{
 			this.point1 = point1;

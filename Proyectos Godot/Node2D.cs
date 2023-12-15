@@ -29,7 +29,6 @@ public partial class Node2D : Godot.Node2D
 			{
 				var X=point.GetX();
 				var Y=-point.GetY();
-				System.Console.WriteLine($"x es {X} y es {Y} ");
 				if(control.CheckError())	return;	
 				DrawCircle(new Vector2((int)X,(int)Y), 2, GetColor(point.color));
 				if (point.text != "")
@@ -51,16 +50,14 @@ public partial class Node2D : Godot.Node2D
 					if (x == null || y == null || n == null)
 					{
 						control.CheckError();
-						System.Console.WriteLine("ss");
 						return;
 					}
-					System.Console.WriteLine("pinto circulp");
 					DrawArc(new Vector2((int)x, (int)y), n, 0, (float)(2 * Math.PI), 64, GetColor(circle.color));
 					if (circle.text != "")
                     {
                         FontFile fontFile = new FontFile();
 						PointExpression point1 = (PointExpression)(Execute.GeneratePointsInLine(circle, 1)[0]);
-                        DrawString(fontFile, new Vector2((float)point1.GetX(), (float)point1.GetY()), circle.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        DrawString(fontFile, new Vector2((float)point1.GetX(), -(float)point1.GetY()), circle.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                     }
 				}
 				else return;
@@ -88,8 +85,6 @@ public partial class Node2D : Godot.Node2D
 
 					if (x_c == null || y_c == null || x_1 == null || y_1 == null || x_2 == null || y_2 == null || ratio == null) return;
 
-                    Console.WriteLine(y_1);
-                    Console.WriteLine(x_1);
                     double startAngle = (double)Math.Atan2(y_1 - y_c, x_1 - x_c);
 					double finalAngle = (double)Math.Atan2(y_2 - y_c, x_2 - x_c);
 
@@ -126,7 +121,7 @@ public partial class Node2D : Godot.Node2D
                         {
                             FontFile fontFile = new FontFile();
                             PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(arc, 1)[0]);
-                            DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                            DrawString(fontFile, new Vector2((float)point3.GetX(), -(float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                         }
                     }
 					else
@@ -139,7 +134,7 @@ public partial class Node2D : Godot.Node2D
                         {
                             FontFile fontFile = new FontFile();
                             PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(arc, 1)[0]);
-                            DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                            DrawString(fontFile, new Vector2((float)point3.GetX(), -(float)point3.GetY()), arc.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                         }
                     }
                 }
@@ -178,7 +173,7 @@ public partial class Node2D : Godot.Node2D
                     {
                         FontFile fontFile = new FontFile();
                         PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(line, 1)[0]);
-                        DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), line.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        DrawString(fontFile, new Vector2((float)point3.GetX(), -(float)point3.GetY()), line.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                     }
 	
 				}
@@ -202,7 +197,7 @@ public partial class Node2D : Godot.Node2D
                     {
                         FontFile fontFile = new FontFile();
                         PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(segment, 1)[0]);
-                        DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), segment.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        DrawString(fontFile, new Vector2((float)point3.GetX(), -(float)point3.GetY()), segment.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                     }
 
 				}
@@ -248,7 +243,7 @@ public partial class Node2D : Godot.Node2D
                     {
                         FontFile fontFile = new FontFile();
                         PointExpression point3 = (PointExpression)(Execute.GeneratePointsInLine(ray, 1)[0]);
-                        DrawString(fontFile, new Vector2((float)point3.GetX(), (float)point3.GetY()), ray.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
+                        DrawString(fontFile, new Vector2((float)point3.GetX(), -(float)point3.GetY()), ray.text, HorizontalAlignment.Left, -1, 14, Color.Color8(0, 0, 0));
                     }
 
 				}
