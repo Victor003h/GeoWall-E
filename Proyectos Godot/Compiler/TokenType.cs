@@ -73,4 +73,5 @@ public enum TokenType
         NextLine2Token,
         MultipleIdentifiersExpression,
         InfinitiSequence,
+    CommentToken,
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 namespace Godot;
 public class Parser
@@ -136,8 +137,8 @@ public class Parser
 			return expr;
 		}
 	   
-		private Expressions _Parse(int precedence = 0)
-		{
+		private Expressions _Parse(int precedence = 0)	
+		{																				
 			var left = Factor();
 			if (left is ErrorExpression) return left;
 
@@ -235,6 +236,7 @@ public class Parser
 						NextToken();
 						comingFromIdentifier=iden;
 						Expressions value= _Parse();
+						if(DeclaredVariable(iden,GlobalContext,false)) return factor;
 						AddToContext(iden,value);
 						return iden;
 					} 
@@ -391,6 +393,13 @@ public class Parser
 			{
 				Token token=currentToken;
 				NextToken();
+				if(currentToken.dato== "sequence")
+				{
+					var seq= FigureSequence(TokenType.Point);
+					if(seq==null)	return factor;
+					return seq;
+				}
+				
 				if (currentToken.type != TokenType.IdentifierToken)
 				{
 					comingFromFunctionParam=true;
@@ -398,7 +407,7 @@ public class Parser
 					{
 						if(comingFromIdentifier==null&& !comingFromFunctionParam)
 						{
-							Errors Err = new Errors($"! SINTAX ERROR: Unexpected Tokensss '{currentToken.dato}'.", currentToken.line, currentToken.col);
+							Errors Err = new Errors($"! SINTAX ERROR: Unexpected Token '{currentToken.dato}'.", currentToken.line, currentToken.col);
 							Lexer.error_list.Add(Err);
 							return factor;
 
@@ -451,45 +460,25 @@ public class Parser
 			{
 				var auxToken = currentToken;
 
-
 				NextToken();
+				if(currentToken.dato=="sequence")
+				{
+					var seq= FigureSequence(auxToken.type);
+					if(seq==null)	return factor;
+					return seq;
+				}
 
 				if (currentToken.type == TokenType.IdentifierToken)
 				{
 					IdentifierExpression id = new IdentifierExpression(currentToken);
 					if (DeclaredVariable(id,GlobalContext,false)) return factor;
 
-					PointExpression point1 = GeneratePoint();
-					PointExpression point2 = GeneratePoint();
-
-					if (auxToken.type == TokenType.Line)
-					{
-						LineExpression lineExp = new LineExpression(point1, point2,color);
-						lineExp.Id=id;
-						if(colorsList.Count!=0)  lineExp.color=colorsList.Peek();
-						AddToContext(id,lineExp);
-						NextToken();
-						return lineExp;
-					}
-					else if (auxToken.type == TokenType.Segment)
-					{
-						SegmentExpression segmentExp = new SegmentExpression(point1, point2,color);
-						segmentExp.Id=id;
-						if(colorsList.Count!=0)  segmentExp.color=colorsList.Peek();
-						AddToContext(id,segmentExp);
-						NextToken();
-						return segmentExp;
-					}
-					else
-					{
-						RayExpression rayExp = new RayExpression(point1, point2,color);
-						rayExp.Id=id;
-						if(colorsList.Count!=0)  rayExp.color=colorsList.Peek();
-						AddToContext(id,rayExp);
-						NextToken();
-						return rayExp;
-					}
+					var line =GenerateLine(auxToken.type);
+					AddToContext(id,line);
+					NextToken();
+					return line;
 				}
+
 				comingFromFunctionParam=true;
 				if (currentToken.type != TokenType.OpenParenthesesToken)
 				{
@@ -545,17 +534,19 @@ public class Parser
 			if (currentToken.type == TokenType.Circunference)
 			{
 				NextToken();
+				if(currentToken.dato=="sequence")
+				{
+					var seq= FigureSequence(TokenType.Circunference);
+					if(seq==null)	return factor;
+					return seq;
+				}
 
 				if (currentToken.type == TokenType.IdentifierToken)
 				{
 					IdentifierExpression id = new IdentifierExpression(currentToken);
 					if (DeclaredVariable(id,GlobalContext,false)) return factor;
 
-					PointExpression point = GeneratePoint();
-					Random rand = new Random(Guid.NewGuid().GetHashCode());
-
-					double ratio = rand.NextDouble()*200;
-					CircunferenceExpression auxCircle = new CircunferenceExpression(point, new NumberExpression(new Token(ratio.ToString(), 0, 0, TokenType.NumberToken)),color);  
+					var auxCircle=GenerateCircunference(TokenType.Circunference);
 					auxCircle.Id=id;
 					if(DeclaredVariable(id,GlobalContext,false)) return factor;
 					if(colorsList.Count!=0)  auxCircle.color=colorsList.Peek();
@@ -641,21 +632,18 @@ public class Parser
 			if (currentToken.type == TokenType.Arc)
 			{
 				NextToken();
-
+				if(currentToken.dato=="sequence")
+				{
+					var seq= FigureSequence(TokenType.Arc);
+					if(seq==null)	return factor;
+					return seq;
+				}
 				if (currentToken.type == TokenType.IdentifierToken)
 				{
 					IdentifierExpression id = new IdentifierExpression(currentToken);
 					if (DeclaredVariable(id,GlobalContext,false)) return factor;
 
-					PointExpression auxPoint1 = GeneratePoint();
-					PointExpression auxPoint2 = GeneratePoint();
-					PointExpression auxPoint3 = GeneratePoint();
-
-					Random rand = new Random(Guid.NewGuid().GetHashCode());
-
-					double ratio = rand.NextDouble()*200;
-
-					ArcExpression auxArc = new ArcExpression(auxPoint1, auxPoint2, auxPoint3, new NumberExpression(new Token(ratio.ToString(), 0, 0, TokenType.NumberToken)),color);
+					var auxArc=GenerateCircunference(TokenType.Arc);
 					auxArc.Id=id;
 					if(!comingFromLet)  AddToContext(id, auxArc);//////////////
 
@@ -784,6 +772,7 @@ public class Parser
 
 			if(currentToken.type==TokenType.UndefinedToken)
 			{
+				NextToken();
 				return new Undefined();
 			}
 			
@@ -881,10 +870,7 @@ public class Parser
 				Lexer.error_list.Add(Error);
 				return new ErrorExpression(currentToken.line, currentToken);
 			}
-
-
 			string name = currentToken.dato;
-
 			if(importNames.Contains(name))
 			{
 				Errors Error = new Errors($"! SINTAX ERROR: {name} file is already imported'.", currentToken.line, currentToken.col);
@@ -1107,7 +1093,7 @@ public class Parser
 			return function;
 		}    
 		
-		static public PointExpression GeneratePoint()
+		public static PointExpression GeneratePoint()
 		{
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			double x = random.NextDouble()*780 - 390;
@@ -1121,6 +1107,107 @@ public class Parser
 			return point;
 		}
 
+		public  LineExpression GenerateLine(TokenType typeOfLine)
+		{
+			System.Drawing.Color color= System.Drawing.Color.Black;
+			if(colorsList.Count!=0) color= colorsList.Peek();
+			PointExpression point1 = GeneratePoint();
+			PointExpression point2 = GeneratePoint();
+
+			if (typeOfLine == TokenType.Line)
+			{
+				LineExpression lineExp = new LineExpression(point1, point2,color);
+				if(colorsList.Count!=0)  lineExp.color=colorsList.Peek();
+				System.Console.WriteLine("genera line");
+				return lineExp;
+			}
+			else if (typeOfLine == TokenType.Segment)
+			{
+				SegmentExpression segmentExp = new SegmentExpression(point1, point2,color);
+				if(colorsList.Count!=0)  segmentExp.color=colorsList.Peek();
+				return segmentExp;
+			}
+			else
+			{
+				RayExpression rayExp = new RayExpression(point1, point2,color);
+				if(colorsList.Count!=0)  rayExp.color=colorsList.Peek();
+				return rayExp;
+			}
+		}
+
+		public CircunferenceExpression GenerateCircunference(TokenType typeOfCircunference)
+		{
+			System.Drawing.Color color= System.Drawing.Color.Black;
+			if(colorsList.Count!=0) color= colorsList.Peek();
+			Random rand = new Random(Guid.NewGuid().GetHashCode());
+			double ratio = rand.NextDouble()*200;
+			if(typeOfCircunference==TokenType.Circunference)
+			{
+				PointExpression auxPoint = GeneratePoint();
+				return new CircunferenceExpression(auxPoint, new NumberExpression(new Token(ratio.ToString(), 0, 0, TokenType.NumberToken)),color);  
+			}
+
+			PointExpression auxPoint1 = GeneratePoint();
+			PointExpression auxPoint2 = GeneratePoint();
+			PointExpression auxPoint3 = GeneratePoint();
+			
+			return new ArcExpression(auxPoint1, auxPoint2, auxPoint3, new NumberExpression(new Token(ratio.ToString(), 0, 0, TokenType.NumberToken)),color);
+		}
+		private Sequence FigureSequence(TokenType typeOfFigure)
+		{
+			List<Expressions>	sequence=new List<Expressions>();
+			NextToken();
+			if(currentToken.type==TokenType.IdentifierToken)
+			{
+				IdentifierExpression idn=new IdentifierExpression(currentToken);
+				if (DeclaredVariable(idn,GlobalContext,false)) return null;
+				for (int i = 0; i < 5; i++)
+				{
+					if(typeOfFigure==TokenType.Point)
+					{
+						var p1=GeneratePoint();
+						sequence.Add(p1);
+					}
+					else if(typeOfFigure==TokenType.Line ||typeOfFigure==TokenType.Segment||typeOfFigure==TokenType.Ray)
+					{
+						var l1=GenerateLine(typeOfFigure);
+						sequence.Add(l1);
+					}
+					else
+					{
+						var c1=GenerateCircunference(typeOfFigure);
+						sequence.Add(c1);
+					}
+					
+				}
+				GlobalContext.Variables.Add(idn,new Sequence(sequence));
+				NextToken();
+			}
+					
+			else if (currentToken.type==TokenType.OpenKeyToken)
+			{
+				Token aux=currentToken;
+				var seq=_Parse();
+				if(seq is not Sequence s2)
+				{
+					Errors Err = new Errors($"! SINTAX ERROR: Expected sequence expression .", aux.line, aux.col);
+					Lexer.error_list.Add(Err);
+					return null;
+				}
+				sequence=s2.sequence;
+			}
+			else
+			{
+				Errors Err = new Errors($"! SINTAX ERROR: Unexpected Token '{currentToken.dato}', expected Identifier or Sequence expression.", currentToken.line, currentToken.col);
+				Lexer.error_list.Add(Err);
+				return null;
+			}
+
+			Sequence s=new Sequence(sequence);
+			s.ElementsType=typeOfFigure;
+			return s;
+					
+		}
 		private bool DeclaredVariable(IdentifierExpression v,Context context,bool notError)
 		{
 
@@ -1177,7 +1264,6 @@ public class Parser
 		}    
 		private Expressions LetFunction()
 		{
-			System.Console.WriteLine($"en let cfuncion es  {contextOfFunction}");
 			Dictionary<Identifiers, Expressions> listVariable = new Dictionary<Identifiers, Expressions>();
 			List< MultipleIdentifiers > multipleIdList = new List< MultipleIdentifiers >();
 			List<Function> functionsList= new List<Function>();

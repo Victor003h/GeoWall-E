@@ -137,6 +137,7 @@ public partial class control : Control
 		{
 			figuresList.Add(item);
 		}
+		
 		node2D.QueueRedraw();
 		CheckError();
 	}

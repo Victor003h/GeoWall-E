@@ -34,7 +34,6 @@ public static class Execute
 							Errors Err = new Errors($"! SEMANTIC ERROR: Unexpected {x.Type} , expected a {fi} ,Sequence elements must be  of the same type", 0, 0);
 							Lexer.error_list.Add(Err);
 							return new Result(null, TokenType.Error);
-
 						}
 					}
 					new_secuen.Add(x.Resultado);
@@ -73,14 +72,14 @@ public static class Execute
 
 				if (p1.Resultado is not PointExpression pt1)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 1, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 					
 				}
 				else if (p2.Resultado is not PointExpression pt2)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 2, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
@@ -96,13 +95,13 @@ public static class Execute
 				
 				if (p1.Resultado is not PointExpression pt1)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 3, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
 				else if (p2.Resultado is not PointExpression pt2)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 4, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
@@ -118,13 +117,13 @@ public static class Execute
 
 				if (p1.Resultado is not PointExpression pt1)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 5, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
 				else if (p2.Resultado is not PointExpression pt2)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 6, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
@@ -140,7 +139,7 @@ public static class Execute
 
 				if (auxpoint.Resultado is not PointExpression pt)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 7, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 
@@ -166,7 +165,7 @@ public static class Execute
 
 				if (center.Resultado is not PointExpression c)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 8, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 
@@ -174,7 +173,7 @@ public static class Execute
 				}
 				else if (point1.Resultado is not PointExpression pt1)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 9, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 
@@ -182,7 +181,7 @@ public static class Execute
 				}
 				else if (point2.Resultado is not PointExpression pt2)
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 10, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 
@@ -214,7 +213,7 @@ public static class Execute
 				}
 				else
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 11, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
@@ -225,7 +224,7 @@ public static class Execute
 				}
 				else
 				{
-					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 0, 0);
+					Errors Error = new Errors($"! SEMANTIC ERROR: Expected PointEsxpression ", 12, 0);
 					Lexer.error_list.Add(Error);
 					return new Result(null, TokenType.Error);
 				}
@@ -334,8 +333,7 @@ public static class Execute
 
 				}
 			}
-			
-			
+						
 			if (tree is LetExpression let)
 			{
 				//   mul             v 			ii=        
@@ -381,12 +379,18 @@ public static class Execute
 						figur.text = d.text;
 						figures.Add(figur);
 					}
+					else if(r.Resultado is Sequence sq)
+					{
+						figures=sq.sequence;
+						
+					}
 					else
 					{
 						Errors Error = new Errors($"! SEMANTIC ERROR: Function draw receives a figure argument, not {r.Type} token.", 0, 0);
 						Lexer.error_list.Add(Error);
 						return null;
 					}
+
 			   }
 
 				var ss=new DrawFunction(d.Function,figures);

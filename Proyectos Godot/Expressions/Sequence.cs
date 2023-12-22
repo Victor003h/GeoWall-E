@@ -64,7 +64,6 @@ public class Sequence:Expressions , ISequence
 
 }
 
-
 public class InfineSequence : Expressions, ISequence
 {
 	private int position=-1;
@@ -174,9 +173,6 @@ public interface ISequence
 	public Expressions Take();
 
 }
-
-
-
 
 
 

@@ -36,8 +36,7 @@ public class Lexer
                     return null;
                 }
                 if(token.type==TokenType.Error) return null;
-
-                if(token.type==TokenType.NextLine2Token || token.type==TokenType.NextLineToken ) 
+                if(token.type==TokenType.NextLine2Token || token.type==TokenType.NextLineToken  ) 
                 {
                     if(token_list.Count!=0)
                     {   
@@ -70,7 +69,11 @@ public class Lexer
             }
             return lines;
         }
-        private Token Tokenizer()
+
+   
+    
+
+    private Token Tokenizer()
         {
         
             if (code[position] == ' ')
@@ -103,6 +106,7 @@ public class Lexer
                 }
                 return new Token("",0,0,TokenType.Error);
             }
+           
             if (char.IsDigit(code[position]) )
             {
                 double number = IsNumber(code);
@@ -132,6 +136,7 @@ public class Lexer
                     return new Token("==", line, col, TokenType.EqualEqualToken);        
                 return new Token(code[position].ToString(), line, col, TokenType.AssignmentToken);
             }
+            
             if (code[position] == '(')
                 return new Token(code[position].ToString(), line, col, TokenType.OpenParenthesesToken);
             if (code[position] == ')')
@@ -210,6 +215,7 @@ public class Lexer
                 case "PI":
                 case "E":
                 case "import":
+                case "sequence":
                     return new Token(str, line, col, TokenType.ReservedWordToken);
                 case "print":
                 case "sin":
